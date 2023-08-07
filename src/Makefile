@@ -1,5 +1,5 @@
-CPPFLAGS=-g
-CC=g++
+FLAGS=-Wall -g -fPIC
+CPPFLAGS=$(FLAGS)
 
 
 SIM_SRC=main.C FourierSim.C
@@ -8,10 +8,12 @@ SIM_OBJ=$(SIM_SRC:.C=.o)
 AMJFOURIER_SRC=FourierSim.C
 AMJFOURIER_OBJ=$(AMJFOURIER_SRC:.C=.o)
 
+CPP=g++ $(CPPFLAGS)
+
 all: libamjFourier.so sim
 
 sim: $(SIM_OBJ)
-	$(CC) -o $@ $^
+	$(CPP) -o $@ $^
 
 libamjFourier.so: $(AMJFOURIER_OBJ)
 	$(CPP) -shared -Wl,-soname,$@ -o $@ $^

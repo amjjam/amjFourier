@@ -5,15 +5,16 @@
 
 template<class T>
 class Frame{
+public:
   Frame(int nL,int nF);
-  ~Frame();
+  ~Frame(){};
   int nL(){return _nL;}
   int nF(){return _nF;}
   template<class U>
   Frame<T> &operator=(const Frame<U> &);
   Frame<T> &operator*=(double);
   Frame<T> &operator+=(const Frame<T> &);
-  std::vector<T> &operator[](int iL) const {return _frame[iL];};
+  std::vector<T> &operator[](int iL){return _frame[iL];};
 private:
   int _nL,_nF;
   std::vector<std::vector<T> > _frame;

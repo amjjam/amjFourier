@@ -32,13 +32,13 @@ double **FourierSim::frame(double t){
     for(int iF=0;iF<nF;iF++)
       _frame[iL][iF]=0;
   // Frame illumination
-  for(int iB=0;iB<_beams.size();iB++)
+  for(unsigned int iB=0;iB<_beams.size();iB++)
     for(int iL=0;iL<nL;iL++)
       for(int iF=0;iF<nF;iF++)
 	_frame[iL][iF]+=airy(x(iF),wavelength(iL),_beams[iB]);
   
   // Fringes
-  for(int iB=0;iB<_baselines.size();iB++)
+  for(unsigned int iB=0;iB<_baselines.size();iB++)
     for(int iL=0;iL<nL;iL++){
       std::complex<double> V0=_baselines[iB].visibility(wavelength(iL));
       for(int iF=0;iF<nF;iF++){
@@ -53,20 +53,19 @@ double **FourierSim::frame(double t){
   return _frame;
 }
 
-template<class T>
-int FourierSim::frame(Frame<T> &frame) const{
+int FourierSim::frame(double t, Frame<double> &frame) const{
   // Clear the frame
   for(int iL=0;iL<nL;iL++)
     for(int iF=0;iF<nF;iF++)
       frame[iL][iF]=0;
   // Frame illumination
-  for(int iB=0;iB<_beams.size();iB++)
+  for(unsigned int iB=0;iB<_beams.size();iB++)
     for(int iL=0;iL<nL;iL++)
       for(int iF=0;iF<nF;iF++)
 	frame[iL][iF]+=airy(x(iF),wavelength(iL),_beams[iB]);
   
   // Fringes
-  for(int iB=0;iB<_baselines.size();iB++)
+  for(unsigned int iB=0;iB<_baselines.size();iB++)
     for(int iL=0;iL<nL;iL++){
       std::complex<double> V0=_baselines[iB].visibility(wavelength(iL));
       for(int iF=0;iF<nF;iF++){
@@ -80,35 +79,35 @@ int FourierSim::frame(Frame<T> &frame) const{
   return 0;      
 }
 
-// std::complex<double> **FourierSim::vis(){
-//   for(int iB=0;iB<_baselines.size();iB++){
-//     std::cout << iB << std::endl;
-//     for(int iL=0;iL<nL;iL++){
-//       double xx=0,yy=0,nn=0;
-//       double xwavelength=wavelength(iL)*f1*m2/(_baselines[iB].beam1().x()-_baselines[iB].beam2().x());
-//       double N=4*xwavelength/d;
-//       int iF1=nF/2-N;
-//       if(iF1<0) iF1=0;
-//       int iF2=nF/2+N;
-//       if(iF2>nF-1) iF2=nF-1;
-//       for(int iF=iF1;iF<iF2;iF++){
-// 	xx+=_frame[iL][iF]*cos(2*M_PI*x(iF)/xwavelength);
-// 	yy+=_frame[iL][iF]*sin(2*M_PI*x(iF)/xwavelength);
-// 	nn+=_frame[iL][iF];
-//       }
-//       _vis[iB][iL].real(xx);
-//       _vis[iB][iL].imag(yy);
-//     }
-//   }
-//   return _vis;
-// }
+std::complex<double> **FourierSim::vis(){
+  for(unsigned int iB=0;iB<_baselines.size();iB++){
+    std::cout << iB << std::endl;
+    for(int iL=0;iL<nL;iL++){
+      double xx=0,yy=0,nn=0;
+      double xwavelength=wavelength(iL)*f1*m2/(_baselines[iB].beam1().x()-_baselines[iB].beam2().x());
+      double N=4*xwavelength/d;
+      int iF1=nF/2-N;
+      if(iF1<0) iF1=0;
+      int iF2=nF/2+N;
+      if(iF2>nF-1) iF2=nF-1;
+      for(int iF=iF1;iF<iF2;iF++){
+	xx+=_frame[iL][iF]*cos(2*M_PI*x(iF)/xwavelength);
+	yy+=_frame[iL][iF]*sin(2*M_PI*x(iF)/xwavelength);
+	nn+=_frame[iL][iF];
+      }
+      _vis[iB][iL].real(xx);
+      _vis[iB][iL].imag(yy);
+    }
+  }
+  return _vis;
+}
 
-double FourierSim::delay(double iF, double t, Baseline &b){
+double FourierSim::delay(double iF, double t, const Baseline &b) const{
   return (b.beam1().x()-b.beam2().x())*x(iF)/f1/m2+b.beam2().delay(t)-b.beam1().delay(t);
 }
 
 /* Borrowed from Press et al. Numerical Recipes */
-double FourierSim::bessj1(double x){
+double FourierSim::bessj1(double x) const{
   double ax,z;
   double xx,y,ans,ans1,ans2;
   
@@ -135,7 +134,7 @@ double FourierSim::bessj1(double x){
 }
 
 
-double FourierSim::airy(double x, double L, Beam &b){
+double FourierSim::airy(double x, double L, const Beam &b) const{
   double Ic=b.illumination(L);
   double y=M_PI*x*b.D()/f1/m2/L;
   if(fabs(y)<1e-6)
@@ -144,7 +143,7 @@ double FourierSim::airy(double x, double L, Beam &b){
   return Ic*tmp*tmp;
 }
 
-double FourierSim::envelope(double delay, int iL){
+double FourierSim::envelope(double delay, int iL) const{
   double y=M_PI*delay*bandpass(iL)/wavelength(iL)/wavelength(iL);
   return sinc(y);
 }

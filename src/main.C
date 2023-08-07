@@ -1,4 +1,4 @@
-#include "../include/FourierSim.H"
+#include "../include/amjFourier.H"
 #include "../include/Frame.H"
 
 #include <stdio.h>
@@ -20,7 +20,7 @@ int main(int argc, char *argv[]){
 
   Frame<double> frame(256,320);
 
-  f.frame(frame);
+  f.frame(0,frame);
   
   //double **frame=f.frame(0);
   
@@ -31,7 +31,7 @@ int main(int argc, char *argv[]){
   fwrite(&nL,sizeof(int),1,fp);
   fwrite(&nF,sizeof(int),1,fp);
   for(int iL=0;iL<nL;iL++)
-    fwrite(frame[iL],sizeof(double),nF,fp);
+    fwrite(frame[iL].data(),sizeof(double),nF,fp);
   fclose(fp);
   
   std::complex<double> **vis=f.vis();
