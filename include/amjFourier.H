@@ -6,11 +6,14 @@
 #include <vector>
 #include <tuple>
 #include <complex>
+#include <functional>
 
 class Beam{
 public:
-  Beam(double x, double D, double (*delay)(double t)=[](double t)->double{return 0;},
-       double (illumination)(double L)=[](double L)->double{return 1;}):
+  Beam(double x, double D,
+       std::function<double(double)> delay=[](double t)->double{return 0;},
+       std::function<double(double)> illumination=[](double L)->double{return 1;}):
+  //double (illumination)(double L)=[](double L)->double{return 1;}):
     _x(x),_D(D),_delay(delay),_illumination(illumination){};
   ~Beam(){};
   double x() const {return _x;}
@@ -20,8 +23,10 @@ public:
 private:
   double _x; // Beam position in mm
   double _D; // Beam diameter in mm
-  double (*_delay)(double t); // Beam delay in microns
-  double (*_illumination)(double L); // Beam brightness as a function of wavelength in microns
+  std::function<double(double)> _delay; // Beam delay in microns
+  //double (*_delay)(double t); 
+  std::function<double(double)> _illumination; // Beam brightness as a function of wavelength in microns
+  //double (*_illumination)(double L); 
 };
 
 class Baseline{
