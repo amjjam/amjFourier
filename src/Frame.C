@@ -1,16 +1,6 @@
 #include "../include/amjFourier.H"
 
 
-Frame<uint16_t> poisson(const Frame<double> &in, long &seed){
-  Frame<uint16_t> out(in.nL(),in.nF());
-
-  for(unsigned int iL=0;iL<in.nL();iL++)
-    for(unsigned int iF=0;iF<in.nF();iF++)
-      out[iL][iF]=poidev(in[iL][iF],&seed);
-  
-  return out;
-}
-
 #include <math.h>
 #define PI 3.141592654
 
