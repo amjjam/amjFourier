@@ -1,11 +1,11 @@
-FLAGS=-Wall -g -fPIC
+FLAGS=-Wall -g -fPIC -I/opt/amjCom/include -L/opt/amjCom/lib
 CPPFLAGS=$(FLAGS)
 
 
 SIM_SRC=main.C FourierSim.C
 SIM_OBJ=$(SIM_SRC:.C=.o)
 
-AMJFOURIER_SRC=FourierSim.C
+AMJFOURIER_SRC=FourierSim.C Frame.C
 AMJFOURIER_OBJ=$(AMJFOURIER_SRC:.C=.o)
 
 CPP=g++ $(CPPFLAGS)
@@ -13,10 +13,10 @@ CPP=g++ $(CPPFLAGS)
 all: libamjFourier.so sim
 
 sim: $(SIM_OBJ)
-	$(CPP) -o $@ $^
+	$(CPP) -o $@ $^ -lamjCom
 
 libamjFourier.so: $(AMJFOURIER_OBJ)
-	$(CPP) -shared -Wl,-soname,$@ -o $@ $^
+	$(CPP) -shared -Wl,-soname,$@ -o $@ $^ -lamjCom
 
 install: libamjFourier.so ../include/amjFourier.H
 	mkdir -p /opt/amj/lib
