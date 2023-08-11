@@ -21,7 +21,7 @@ void FourierSim::baselines(std::vector<Baseline> baselines){
   _baselines=baselines;
   _vis=(std::complex<double> **)malloc(_baselines.size()*sizeof(std::complex<double> *));
   _vis[0]=(std::complex<double> *)malloc(_baselines.size()*nL*sizeof(std::complex<double>));
-  for(int i=1;i<nL;i++)
+  for(unsigned int i=1;i<_baselines.size();i++)
     _vis[i]=_vis[0]+i*nL;
 }
 
