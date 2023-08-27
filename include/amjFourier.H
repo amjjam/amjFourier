@@ -5,21 +5,33 @@
 #define _FRAME_H_
 
 #include <vector>
+#include <cstdint>
+
+#include <complex>
+
+#include <amjPacketRW.H>
+#include <amjPacket.H>
+
+#include <amjInterferometry.H>
 
 template<class T>
-class Frame{
+class Frame:public amjPacketRW{
 public:
   Frame(int nL,int nF);
   ~Frame(){};
-  int nL(){return _nL;}
-  int nF(){return _nF;}
+  unsigned int nL() const {return _nL;}
+  unsigned int nF() const {return _nF;}
+  void clear();
   template<class U>
   Frame<T> &operator=(const Frame<U> &);
   Frame<T> &operator*=(double);
   Frame<T> &operator+=(const Frame<T> &);
   std::vector<T> &operator[](int iL){return _frame[iL];};
+  const std::vector<T> &operator[](int iL) const {return _frame[iL];};
+  virtual void write(amjPacket &p) const;
+  virtual void read(amjPacket &p);
 private:
-  int _nL,_nF;
+  unsigned int _nL,_nF;
   std::vector<std::vector<T> > _frame;
 };
 
@@ -28,6 +40,14 @@ Frame<T>::Frame(int nL, int nF):_nL(nL),_nF(nF){
   _frame.resize(nL);
   for(int iL=0;iL<nL;iL++)
     _frame[iL].resize(nF);
+}
+
+template<class T>
+void Frame<T>::clear(){
+  unsigned int iF;
+  for(unsigned int iL=0;iL<_nL;iL++)
+    for(iF=0;iF<_nF;iF++)
+      _frame[iL][iF]=0;
 }
 
 template<class T>
@@ -80,7 +100,49 @@ Frame<T> &Frame<T>::operator+=(const Frame<T> &f){
 //       f._frame[iL][iF]=poidev(g._frame[iL][iF]);
 //   }
 // }
-  
+
+
+template<class T>
+void Frame<T>::write(amjPacket &p) const{
+  p.resize(2*sizeof(unsigned int)+_nL*_nF*sizeof(T));
+  memcpy(p._data(),&_nL,sizeof(unsigned int));
+  memcpy(p._data()+sizeof(unsigned int),&_nF,sizeof(unsigned int));
+  for(unsigned int iL=0;iL<_nL;iL++)
+    memcpy(p._data()+2*sizeof(unsigned int)+iL*_nF*sizeof(T),_frame[iL].data(),_nF*sizeof(T));
+}
+
+template<class T>
+void Frame<T>::read(amjPacket &p){
+  memcpy(&_nL,p._data(),sizeof(unsigned int));
+  memcpy(&_nF,p._data()+sizeof(unsigned int),sizeof(unsigned int));
+  _frame.resize(_nL);
+  for(unsigned int iL=0;iL<_nL;iL++){
+    _frame[iL].resize(_nF);
+    memcpy(_frame[iL].data(),p._data()+2*sizeof(unsigned int)+iL*_nF*sizeof(T),_nF*sizeof(T));
+  }
+}
+
+float poidev(float xm, long *idum);
+
+// template<class T, class U>
+// Frame<T> poisson(const Frame<U> &in, long &seed){
+//   Frame<T> out(in.nL(),in.nF());
+//   for(unsigned int iL=0;iL<in.nL();iL++)
+//     for(unsigned int iF=0;iF<in.nF();iF++)
+//       out[iL][iF]=poidev(in[iL][iF],&seed);
+//   return out;
+// }
+
+
+template<class T, class U>
+void poisson(const Frame<T> &in, Frame<U> &out, long &seed){
+  for(unsigned int iL=0;iL<in.nL();iL++)
+    for(unsigned int iF=0;iF<in.nF();iF++)
+      out[iL][iF]=poidev(in[iL][iF],&seed);
+}
+
+
+
 #endif /* _FRAME_H_ */
 
 #include <vector>
@@ -90,10 +152,9 @@ Frame<T> &Frame<T>::operator+=(const Frame<T> &f){
 
 class Beam{
 public:
-  Beam(double x, double D,
+  Beam(double x=0, double D=0,
        std::function<double(double)> delay=[](double t)->double{return 0;},
        std::function<double(double)> illumination=[](double L)->double{return 1;}):
-  //double (illumination)(double L)=[](double L)->double{return 1;}):
     _x(x),_D(D),_delay(delay),_illumination(illumination){};
   ~Beam(){};
   double x() const {return _x;}
@@ -104,9 +165,7 @@ private:
   double _x; // Beam position in mm
   double _D; // Beam diameter in mm
   std::function<double(double)> _delay; // Beam delay in microns
-  //double (*_delay)(double t); 
   std::function<double(double)> _illumination; // Beam brightness as a function of wavelength in microns
-  //double (*_illumination)(double L); 
 };
 
 class Baseline{
@@ -119,47 +178,75 @@ public:
   const Beam &beam2() const {return _beam2;}
   std::complex<double> visibility(double L) const {return _visibility(L);}
 private:
-  Beam _beam1,_beam2;
+  Beam &_beam1,&_beam2;
   std::complex<double> (*_visibility)(double);
 };
 
 class FourierSim{
 public:
-  FourierSim(int nL=256, int nF=320, double d=24, double f1=1203, double d2=52.5, double f2=44,
-	     double (*wavelength)(int)=[](int i)->double{return 1/(1+(1/2.5-1)/256*i);},
-	     double (*bandpass)(int)=[](int i)->double{return (1/(1+(1/2.5-1)/256*(i+1))
-							       -1/(1+(1/2.5-1)/256*(i-1)));});
+  FourierSim(const std::vector<Beam> &beams,
+	     const std::vector<Baseline> &baselines,
+	     int nL=256, int nF=320, double d=24, double f1=1203,
+	     double d2=52.5, double f2=44,
+	     std::function<double(int)> wavelength=
+	     [](int i)->double{return 1/(1+(1/2.5-1)/256*i);},
+	     std::function<double(int)> bandpass=
+	     [](int i)->double{return (1/(1+(1/2.5-1)/256*(i+1))
+				       -1/(1+(1/2.5-1)/256*(i-1)));});
   ~FourierSim();
-  void beams(std::vector<Beam> beams){_beams=beams;};
-  void baselines(std::vector<Baseline> baselines);
   void dim(int &_nL, int &_nF){_nL=nL;_nF=nF;};
-  double **frame(double t);
+  //double **frame(double t);
   //template<class T>
   int frame(double t, Frame<double> &) const;
-  std::complex<double> **vis();
+  //std::complex<double> **vis();
   // Fringe direction position as a function of pixel number. Pixel 0 is center of left-most pixel,
   // pixel -0.5 is left side of left-most pixel, pixel NF-1 is center of right-most pixel, and
   // pixel NF-0.5 is right side of right-most pixel. etc... returned position is relative to center
   // of row which is pixel number (-0.5+NF-0.5)/2=(NF-1)/2
   double x(double iF) const {return ((double)iF-((double)nF-1)/2)*d;};
-  double delay(double iF, double t, const Baseline &b) const; // Total delay for a pixel for a baseline
+  //double delay(double iF, double t, const Baseline &b) const; // Total delay for a pixel for a baseline
 private:
+  const std::vector<Beam> &beams; // reference to vector of beams
+  const std::vector<Baseline> &baselines; // reference to vector of baselines
+  std::vector<int> bi1; // index into beams of beam1 for each baseline
+  std::vector<int> bi2; // index into beams of beam2 for each baseline
   int nL,nF; // Number of pixels in wavelength and fringe direction
   double d; // Pixel size in wavelength direction in microns
   double f1; // Focal length of M1 in mm
   double d2; // Distance from M1 focus to M2 in mm
   double f2; // Focal length of M2 in mm
   double m2; // Magnification in fringe direction by M2
-  double (*wavelength)(int); // Wavelength in microns
-  double (*bandpass)(int); // Bandpass in microns
-  double sinc(double x) const {if(fabs(x)<1e-6) return 1-x*x/6; return sin(x)/x;};
+  std::function<double(int)> wavelength; // Wavelength in microns
+  std::function<double(int)> bandpass; // Bandpass in microns
+  std::vector<std::vector<float> > airys; // Airy patterns from beams [nBeam][nL*nF]
+  std::vector<float> illumination; // Sum of airy patterns [nL*nF];
+  std::vector<std::vector<float> > airys2; // Airy patterns from baselines [nBaselines][2][nL*nF]
+  
+  void initialize();
   double bessj1(double x) const;
-  double airy(double x, double L, const Beam &b) const;
-  double envelope(double delay, int iL) const;
-  double ** _frame; // [nlambda][nfringe]
-  std::complex<double> ** _vis; // [nBaselines][nLambda]
-  std::vector<Beam> _beams;
-  std::vector<Baseline> _baselines;
+  
+  float envelope(float delay, float B, float L) const;
+  double sinc(double x) const {if(fabs(x)<1e-6) return 1-x*x/6; return sin(x)/x;};
+  //double ** _frame; // [nlambda][nfringe]
+  //std::complex<double> ** _vis; // [nBaselines][nLambda]
 };
+
+class FourierCompute{
+public:
+  FourierCompute(int nL, int nF, const std::vector<float> &periods,
+		 std::function<double(int)> wavelength=
+		 [](int i)->double{return 1/(1+(1/2.5-1)/256*i);});
+  ~FourierCompute(){};
+  void resizephasors(PhasorSets &phasors);
+  void phasors(const Frame<uint16_t> &frame, PhasorSets &);
+private:
+  int nL; // number of wavelengths
+  int nF; // number of pixels in fringe direction
+  std::function<double(int)> wavelength;
+  std::vector<float> periods; // [nB] - nB is number of baselines
+  std::vector<float> c; // [iB][iL][iF]
+  std::vector<float> s; // [iB][iL][iF]
+};
+
 
 #endif /* _FOURIERSIM_H_ */
