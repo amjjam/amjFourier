@@ -6,7 +6,7 @@
 FourierCompute::FourierCompute(int nL, int nF,
 			       const std::vector<float> &periods,
 			       std::function<double(int)> wavelength)
-  :wavelength(wavelength),periods(periods){
+  :nL(nL),nF(nF),wavelength(wavelength),periods(periods){
   c.resize(periods.size()*nL*nF);
   s.resize(periods.size()*nL*nF);
   int i1,i2,i3;
