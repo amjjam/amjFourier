@@ -2,13 +2,14 @@
 
 FourierSim::FourierSim(const std::vector<Beam> &beams,
 		       const std::vector<Baseline> &baselines,
-		       int nL, int nF, double d, double f1,
-		       double d2, double f2,
+		       int nL, int nF,
 		       std::function<double(int)> wavelength,
-		       std::function<double(int)> bandpass):
+		       std::function<double(int)> bandpass,
+		       double d, double f1,
+		       double d2, double f2):
   beams(beams),baselines(baselines),
-  nL(nL),nF(nF),d(d),f1(f1),d2(d2),f2(f2),
-  wavelength(wavelength),bandpass(bandpass){
+  nL(nL),nF(nF),wavelength(wavelength),bandpass(bandpass),
+  d(d),f1(f1),d2(d2),f2(f2){
   m2=f2/(f2-d2); // Magnification in fringe direction by M2 (5.18)
   initialize();
 }

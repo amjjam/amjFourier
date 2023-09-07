@@ -184,51 +184,39 @@ private:
 
 class FourierSim{
 public:
-  FourierSim(const std::vector<Beam> &beams,
-	     const std::vector<Baseline> &baselines,
-	     int nL=256, int nF=320, double d=24, double f1=1203,
-	     double d2=52.5, double f2=44,
-	     std::function<double(int)> wavelength=
-	     [](int i)->double{return 1/(1+(1/2.5-1)/256*i);},
-	     std::function<double(int)> bandpass=
-	     [](int i)->double{return (1/(1+(1/2.5-1)/256*(i+1))
-				       -1/(1+(1/2.5-1)/256*(i-1)));});
+  FourierSim(const std::vector<Beam> &beams,const std::vector<Baseline> &baselines,
+	     int nL=256, int nF=320, 
+	     std::function<double(int)> wavelength=[](int i)->double{return 1/(1+(1/2.5-1)/256*i);},
+	     std::function<double(int)> bandpass=[](int i)->double{return (1/(1+(1/2.5-1)/256*(i+1))-1/(1+(1/2.5-1)/256*(i-1)));},
+	     double d=24, double f1=1203,double d2=52.5, double f2=44);
   ~FourierSim();
   void dim(int &_nL, int &_nF){_nL=nL;_nF=nF;};
-  //double **frame(double t);
-  //template<class T>
   int frame(double t, Frame<double> &) const;
-  //std::complex<double> **vis();
   // Fringe direction position as a function of pixel number. Pixel 0 is center of left-most pixel,
   // pixel -0.5 is left side of left-most pixel, pixel NF-1 is center of right-most pixel, and
   // pixel NF-0.5 is right side of right-most pixel. etc... returned position is relative to center
   // of row which is pixel number (-0.5+NF-0.5)/2=(NF-1)/2
   double x(double iF) const {return ((double)iF-((double)nF-1)/2)*d;};
-  //double delay(double iF, double t, const Baseline &b) const; // Total delay for a pixel for a baseline
 private:
   const std::vector<Beam> &beams; // reference to vector of beams
   const std::vector<Baseline> &baselines; // reference to vector of baselines
   std::vector<int> bi1; // index into beams of beam1 for each baseline
   std::vector<int> bi2; // index into beams of beam2 for each baseline
   int nL,nF; // Number of pixels in wavelength and fringe direction
+  std::function<double(int)> wavelength; // Wavelength in microns
+  std::function<double(int)> bandpass; // Bandpass in microns
   double d; // Pixel size in wavelength direction in microns
   double f1; // Focal length of M1 in mm
   double d2; // Distance from M1 focus to M2 in mm
   double f2; // Focal length of M2 in mm
   double m2; // Magnification in fringe direction by M2
-  std::function<double(int)> wavelength; // Wavelength in microns
-  std::function<double(int)> bandpass; // Bandpass in microns
   std::vector<std::vector<float> > airys; // Airy patterns from beams [nBeam][nL*nF]
   std::vector<float> illumination; // Sum of airy patterns [nL*nF];
   std::vector<std::vector<float> > airys2; // Airy patterns from baselines [nBaselines][2][nL*nF]
-  
   void initialize();
-  double bessj1(double x) const;
-  
+  double bessj1(double x) const;  
   float envelope(float delay, float B, float L) const;
   double sinc(double x) const {if(fabs(x)<1e-6) return 1-x*x/6; return sin(x)/x;};
-  //double ** _frame; // [nlambda][nfringe]
-  //std::complex<double> ** _vis; // [nBaselines][nLambda]
 };
 
 class FourierCompute{
