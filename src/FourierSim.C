@@ -15,47 +15,9 @@ FourierSim::FourierSim(const std::vector<Beam> &beams,
 }
 
 FourierSim::~FourierSim(){
-  // free(_frame[0]);
-  // free(_frame);
-  /* Also free _vis, only if it was allocated */
 }
 
-// void FourierSim::baselines(std::vector<Baseline> baselines){
-//   _baselines=baselines;
-//   _vis=(std::complex<double> **)malloc(_baselines.size()*sizeof(std::complex<double> *));
-//   _vis[0]=(std::complex<double> *)malloc(_baselines.size()*nL*sizeof(std::complex<double>));
-//   for(unsigned int i=1;i<_baselines.size();i++)
-//     _vis[i]=_vis[0]+i*nL;
-// }
-
 #include<iostream>
-// double **FourierSim::frame(double t){
-//   // Clear the frame
-//   for(int iL=0;iL<nL;iL++)
-//     for(int iF=0;iF<nF;iF++)
-//       _frame[iL][iF]=0;
-//   // Frame illumination
-//   for(unsigned int iB=0;iB<_beams.size();iB++)
-//     for(int iL=0;iL<nL;iL++)
-//       for(int iF=0;iF<nF;iF++)
-// 	_frame[iL][iF]+=airy(x(iF),wavelength(iL),_beams[iB]);
-  
-//   // Fringes
-//   for(unsigned int iB=0;iB<_baselines.size();iB++)
-//     for(int iL=0;iL<nL;iL++){
-//       std::complex<double> V0=_baselines[iB].visibility(wavelength(iL));
-//       for(int iF=0;iF<nF;iF++){
-// 	double I1=airy(x(iF),wavelength(iL),_baselines[iB].beam1());
-// 	double I2=airy(x(iF),wavelength(iL),_baselines[iB].beam2());
-// 	std::complex V=V0*envelope(delay(iF,t,_baselines[iB]),iL);
-// 	//std::cout << iB << " " << iL << " " << iF << " " << delay(iF,t,_baselines[iB]) << " " << envelope(delay(iF,t,_baselines[iB]),iL) << " " << I1 << " " << I2 << std::endl;
-// 	_frame[iL][iF]+=2*sqrt(I1*I2)*fabs(V)*cos(2*M_PI*delay(iF,t,_baselines[iB])/wavelength(iL)
-// 						  +std::arg(V));
-//       }
-//     }
-//   return _frame;
-// }
-
 int FourierSim::frame(double t, Frame<double> &frame) const{
   if((int)frame.nL()!=nL||(int)frame.nF()!=nF){
     std::cout << "FourierSim: Frame size mismatch: in simulator (nL,nF)=("
@@ -92,44 +54,14 @@ int FourierSim::frame(double t, Frame<double> &frame) const{
       for(iF=0;iF<nF;iF++){
 	j=i+iF;
 	delay=fdelay1*x(iF)+delay2;
-	//double I1=airys(x(iF),wavelength(iL),_baselines[iB].beam1());
-	//double I2=airy(x(iF),wavelength(iL),_baselines[iB].beam2());
-	V=V0*envelope(delay,L,B);//(iF,t,baselines[iB]),iL);
+	V=V0*envelope(delay,L,B);
 	frame[iL][iF]+=2*sqrt(airys[iB1][j]*airys[iB2][j])*fabs(V)
-	  *cos(2*M_PI*delay/*(iF,t,baselines[iB])*//L+std::arg(V));
+	  *cos(2*M_PI*delay/L+std::arg(V));
       }
     }
   }
   return 0;      
 }
-
-// std::complex<double> **FourierSim::vis(){
-//   for(unsigned int iB=0;iB<_baselines.size();iB++){
-//     std::cout << iB << std::endl;
-//     for(int iL=0;iL<nL;iL++){
-//       double xx=0,yy=0,nn=0;
-//       double xwavelength=wavelength(iL)*f1*m2/(_baselines[iB].beam1().x()-_baselines[iB].beam2().x());
-//       double N=4*xwavelength/d;
-//       int iF1=nF/2-N;
-//       if(iF1<0) iF1=0;
-//       int iF2=nF/2+N;
-//       if(iF2>nF-1) iF2=nF-1;
-//       for(int iF=iF1;iF<iF2;iF++){
-// 	xx+=_frame[iL][iF]*cos(2*M_PI*x(iF)/xwavelength);
-// 	yy+=_frame[iL][iF]*sin(2*M_PI*x(iF)/xwavelength);
-// 	nn+=_frame[iL][iF];
-//       }
-//       _vis[iB][iL].real(xx);
-//       _vis[iB][iL].imag(yy);
-//     }
-//   }
-//   return _vis;
-// }
-
-// double FourierSim::delay(double iF, double t, const Baseline &b) const{
-//   return (b.beam1().x()-b.beam2().x())*x(iF)/f1/m2+b.beam2().delay(t)-b.beam1().delay(t);
-// }
-
 
 void FourierSim::initialize(){
   // Compute airys for beams
@@ -223,31 +155,7 @@ double FourierSim::bessj1(double x) const{
   return ans;
 }
 
-// double FourierSim::airy(double x, double L, const Beam &b) const{
-//   double Ic=b.illumination(L);
-//   double y=M_PI*x*b.D()/f1/m2/L;
-//   if(fabs(y)<1e-6)
-//     return Ic;
-//   double tmp=exp(-y*y);
-//   return Ic*tmp;//*tmp;
-// }
-
-
-// double FourierSim::airy(double x, double L, const Beam &b) const{
-//   double Ic=b.illumination(L);
-//   double y=M_PI*x*b.D()/f1/m2/L;
-//   if(fabs(y)<1e-6)
-//     return Ic;
-//   double tmp=2*bessj1(y)/y;
-//   return Ic*tmp*tmp;
-// }
-
 float FourierSim::envelope(float delay, float L, float B) const{
   float y=M_PI*delay*B/L/L;
   return sinc(y);
 }
-
-// float FourierSim::envelope(float delay, int iL) const{
-//   float y=M_PI*delay*bandpass(iL)/wavelength(iL)/wavelength(iL);
-//   return sinc(y);
-// }
