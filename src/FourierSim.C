@@ -57,6 +57,13 @@ FourierSim::~FourierSim(){
 // }
 
 int FourierSim::frame(double t, Frame<double> &frame) const{
+  if((int)frame.nL()!=nL||(int)frame.nF()!=nF){
+    std::cout << "FourierSim: Frame size mismatch: in simulator (nL,nF)=("
+	      << nL << "," << nF << "), in frame (" << frame.nL() << ","
+	      << frame.nF() << ")" << std::endl;
+    abort();
+  }
+
   int iB1,iB2;
   int iL,iF;
   float L,B,fdelay1,delay2,delay;
