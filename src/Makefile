@@ -1,4 +1,4 @@
-FLAGS=-Wall -g -fPIC -I/opt/amjCom/include -L/opt/amjCom/lib -I/opt/amj/include -L/opt/amj/lib
+FLAGS=-Wall -g -O3 -fPIC -I/opt/amjCom/include -L/opt/amjCom/lib -I/opt/amj/include -L/opt/amj/lib
 CPPFLAGS=$(FLAGS)
 
 
