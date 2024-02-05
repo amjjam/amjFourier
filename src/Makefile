@@ -10,6 +10,8 @@ AMJFOURIER_OBJ=$(AMJFOURIER_SRC:.C=.o)
 
 CPP=g++ $(CPPFLAGS)
 
+prefix=/opt/amj
+
 all: libamjFourier.so sim
 
 sim: $(SIM_OBJ)
@@ -19,14 +21,16 @@ libamjFourier.so: $(AMJFOURIER_OBJ)
 	$(CPP) -shared -Wl,-soname,$@ -o $@ $^ -lamjCom -lamjInterferometry
 
 install: libamjFourier.so ../include/amjFourier.H
-	mkdir -p /opt/amj/lib
-	mkdir -p /opt/amj/include
-	cp libamjFourier.so /opt/amj/lib
-	cp ../include/amjFourier.H /opt/amj/include
+	mkdir -p $(prefix)/lib
+	mkdir -p $(prefix)/include
+	cp libamjFourier.so $(prefix)/lib
+	cp ../include/amjFourier.H $(prefix)/include
 
 uninstall:
-	- rm /opt/amj/lib/libamjFourier.so
-	- rm /opt/amj/include/amjFourier.H
+	- rm $(prefix)/lib/libamjFourier.so
+	- rm $(prefix)/include/amjFourier.H
+	- rmdir $(prefix)/lib
+	- rmdir $(prefix)/include
 
 clean:
 	- rm $(SIM_OBJ) sim $(AMJFOURIER_OBJ) libamjFourier.so
