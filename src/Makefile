@@ -1,4 +1,17 @@
-FLAGS=-Wall -g -O3 -fPIC -I/opt/amjCom/include -L/opt/amjCom/lib -I/opt/amj/include -L/opt/amj/lib
+prefix=/opt/amj
+
+ifndef prefix_amjCom
+	prefix_amjCom=$(prefix)
+endif
+
+ifndef prefix_amjInterferometry
+	prefix_amjInterferometry=$(prefix)
+endif
+
+LIBS=-lamjCom -lamjInterferometry
+LDFLAGS=-L$(prefix_amjCom)/lib -L$(prefix_amjInterferometry)/lib
+
+FLAGS=-Wall -g -O3 -fPIC -I$(prefix_amjCom)/include -I$(prefix_amjInterferometry)/include
 CPPFLAGS=$(FLAGS)
 
 
@@ -10,15 +23,14 @@ AMJFOURIER_OBJ=$(AMJFOURIER_SRC:.C=.o)
 
 CPP=g++ $(CPPFLAGS)
 
-prefix=/opt/amj
 
 all: libamjFourier.so sim
 
 sim: $(SIM_OBJ)
-	$(CPP) -o $@ $^ -lamjCom
+	$(CPP) -o $@ $^ $(LDFLAGS) $(LIBS)
 
 libamjFourier.so: $(AMJFOURIER_OBJ)
-	$(CPP) -shared -Wl,-soname,$@ -o $@ $^ -lamjCom -lamjInterferometry
+	$(CPP) -shared -Wl,-soname,$@ -o $@ $^ $(LDFLAGS) $(LIBS)
 
 install: libamjFourier.so ../include/amjFourier.H
 	mkdir -p $(prefix)/lib

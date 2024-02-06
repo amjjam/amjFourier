@@ -9,8 +9,8 @@
 
 #include <complex>
 
-#include <amjPacketRW.H>
-#include <amjPacket.H>
+#include <amjCom/amjPacketRW.H>
+#include <amjCom/amjPacket.H>
 
 #include <amjInterferometry.H>
 
