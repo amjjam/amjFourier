@@ -10,9 +10,9 @@ int main(int argc, char *argv[]){
   Beam beam3(78,13,[](double t)->double{return -2;},[](double L)->double{return 1/*exp(-2*L+2)*/;});
   std::vector<Beam> beams={beam1,beam2,beam3};
   
-  Baseline baseline1(beam1,beam2,[](double L)->std::complex<double>{return 1/*exp(-2*L+2)*/;});
-  Baseline baseline2(beam2,beam3,[](double L)->std::complex<double>{return 1/*exp(-2*L+2)*/;});
-  Baseline baseline3(beam1,beam3,[](double L)->std::complex<double>{return 1/*exp(-2*L+2)*/;});
+  Baseline baseline1("baseline1",beam1,beam2,[](double L)->std::complex<double>{return 1/*exp(-2*L+2)*/;});
+  Baseline baseline2("baseline2",beam2,beam3,[](double L)->std::complex<double>{return 1/*exp(-2*L+2)*/;});
+  Baseline baseline3("baseline3",beam1,beam3,[](double L)->std::complex<double>{return 1/*exp(-2*L+2)*/;});
   std::vector<Baseline> baselines={baseline1,baseline2,baseline3};
 
   FourierSim f(beams,baselines);

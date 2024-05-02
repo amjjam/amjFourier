@@ -170,14 +170,16 @@ private:
 
 class Baseline{
 public:
-  Baseline(Beam &beam1, Beam &beam2,std::complex<double>(*visibility)(double)
+  Baseline(const std::string &name, Beam &beam1, Beam &beam2,std::complex<double>(*visibility)(double)
 	   =[](double L)->std::complex<double>{return 1;})
-    :_beam1(beam1),_beam2(beam2),_visibility(visibility){};
+    :_name(name),_beam1(beam1),_beam2(beam2),_visibility(visibility){};
   ~Baseline(){};
+  std::string name(){return _name;};
   const Beam &beam1() const {return _beam1;}
   const Beam &beam2() const {return _beam2;}
   std::complex<double> visibility(double L) const {return _visibility(L);}
 private:
+  std::string _name;
   Beam &_beam1,&_beam2;
   std::complex<double> (*_visibility)(double);
 };
