@@ -18,7 +18,7 @@ FourierSim::~FourierSim(){
 }
 
 #include<iostream>
-int FourierSim::frame(double t, Frame<double> &frame) const{
+int FourierSim::frame(double t, Frame<double> &frame, std::vector<double> &nv2) const{
   if((int)frame.nL()!=nL||(int)frame.nF()!=nF){
     std::cout << "FourierSim: Frame size mismatch: in simulator (nL,nF)=("
 	      << nL << "," << nF << "), in frame (" << frame.nL() << ","
@@ -31,6 +31,7 @@ int FourierSim::frame(double t, Frame<double> &frame) const{
   float L,B,fdelay1,delay2,delay;
   std::complex<float> V0,V;
   int i,j;
+  nv2.resize(baselines.size());
   
   // Clear the frame
   frame.clear();
@@ -46,6 +47,7 @@ int FourierSim::frame(double t, Frame<double> &frame) const{
     iB2=bi2[iB];
     fdelay1=(beams[iB1].x()-beams[iB2].x())/f1/m2;
     delay2=beams[iB2].delay(0)-beams[iB1].delay(0);
+    nv2[iB]=0;
     for(iL=0;iL<nL;iL++){
       L=wavelength(iL);
       B=bandpass(iL);
@@ -55,6 +57,7 @@ int FourierSim::frame(double t, Frame<double> &frame) const{
 	j=i+iF;
 	delay=fdelay1*x(iF)+delay2;
 	V=V0*envelope(delay,L,B);
+	nv2[iB]+=sqrt(airys[iB1][j]*airys[iB2][j])*fabs(V)*fabs(V);
 	frame[iL][iF]+=2*sqrt(airys[iB1][j]*airys[iB2][j])*fabs(V)
 	  *cos(2*M_PI*delay/L+std::arg(V));
       }

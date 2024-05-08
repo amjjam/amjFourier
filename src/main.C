@@ -18,8 +18,9 @@ int main(int argc, char *argv[]){
   FourierSim f(beams,baselines);
 
   Frame<double> frame(256,320);
-
-  f.frame(0,frame);
+  std::vector<double> nv2;
+  
+  f.frame(0,frame,nv2);
   
   //double **frame=f.frame(0);
   
