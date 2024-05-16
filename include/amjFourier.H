@@ -193,7 +193,7 @@ public:
 	     double d=24, double f1=1203,double d2=52.5, double f2=44);
   ~FourierSim();
   void dim(int &_nL, int &_nF){_nL=nL;_nF=nF;};
-  int frame(double t, Frame<double> &, std::vector<double> &) const;
+  int frame(double t, Frame<double> &, double &, std::vector<double> &, std::vector<double> &, std::vector<double> &) const;
   // Fringe direction position as a function of pixel number. Pixel 0 is center of left-most pixel,
   // pixel -0.5 is left side of left-most pixel, pixel NF-1 is center of right-most pixel, and
   // pixel NF-0.5 is right side of right-most pixel. etc... returned position is relative to center
