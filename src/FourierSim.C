@@ -18,7 +18,9 @@ FourierSim::~FourierSim(){
 }
 
 #include<iostream>
-int FourierSim::frame(double t, Frame<double> &frame, std::vector<double> &nv2) const{
+int FourierSim::frame(double t, Frame<double> &frame, double &nn,
+		      std::vector<double> &n, std::vector<double> &nv,
+		      std::vector<double> &nv2) const{
   if((int)frame.nL()!=nL||(int)frame.nF()!=nF){
     std::cout << "FourierSim: Frame size mismatch: in simulator (nL,nF)=("
 	      << nL << "," << nF << "), in frame (" << frame.nL() << ","
@@ -31,15 +33,18 @@ int FourierSim::frame(double t, Frame<double> &frame, std::vector<double> &nv2) 
   float L,B,fdelay1,delay2,delay;
   std::complex<float> V0,V;
   int i,j;
+  n.resize(baselines.size());
+  nv.resize(baselines.size());
   nv2.resize(baselines.size());
   
   // Clear the frame
   frame.clear();
 
   // Frame illumination
+  nn=0;
   for(iL=0;iL<nL;iL++)
     for(iF=0;iF<nF;iF++)
-      frame[iL][iF]=illumination[iL*nF+iF];
+      nn+=frame[iL][iF]=illumination[iL*nF+iF];
   
   // Fringes
   for(unsigned int iB=0;iB<baselines.size();iB++){
@@ -47,6 +52,8 @@ int FourierSim::frame(double t, Frame<double> &frame, std::vector<double> &nv2) 
     iB2=bi2[iB];
     fdelay1=(beams[iB1].x()-beams[iB2].x())/f1/m2;
     delay2=beams[iB2].delay(0)-beams[iB1].delay(0);
+    n[iB]=0;
+    nv[iB]=0;
     nv2[iB]=0;
     for(iL=0;iL<nL;iL++){
       L=wavelength(iL);
@@ -57,7 +64,9 @@ int FourierSim::frame(double t, Frame<double> &frame, std::vector<double> &nv2) 
 	j=i+iF;
 	delay=fdelay1*x(iF)+delay2;
 	V=V0*envelope(delay,L,B);
-	nv2[iB]+=sqrt(airys[iB1][j]*airys[iB2][j])*fabs(V)*fabs(V);
+	n[iB]+=airys[iB1][j]+airys[iB2][j];
+	nv[iB]+=2*sqrt(airys[iB1][j]*airys[iB2][j])*fabs(V);
+	nv2[iB]+=2*sqrt(airys[iB1][j]*airys[iB2][j])*fabs(V)*fabs(V);
 	frame[iL][iF]+=2*sqrt(airys[iB1][j]*airys[iB2][j])*fabs(V)
 	  *cos(2*M_PI*delay/L+std::arg(V));
       }
