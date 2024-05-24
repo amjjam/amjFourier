@@ -117,10 +117,10 @@ void FourierSim::initialize(){
   bi2.resize(baselines.size());
   for(iB=0;iB<baselines.size();iB++){
     for(iBeam=0;iBeam<beams.size();iBeam++){
-      std::cout << &beams[iBeam] << " " << &baselines[iB].beam1() << std::endl;
+      //std::cout << &beams[iBeam] << " " << &baselines[iB].beam1() << std::endl;
       if(&beams[iBeam]==&baselines[iB].beam1()){
 	bi1[iB]=iBeam;
-	std::cout << "found" << std::endl;
+	//std::cout << "found" << std::endl;
 	break;
       }
     }
