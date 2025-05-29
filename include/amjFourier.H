@@ -29,9 +29,15 @@ public:
   std::vector<T> &operator[](int iL){return _frame[iL];};
   const std::vector<T> &operator[](int iL) const {return _frame[iL];};
   virtual void write(amjPacket &p) const;
+  int size(){return 2*sizeof(uint32_t)+_nL*_nF*sizeof(T);};
+  virtual void write(uint8_t *) const;
   virtual void read(amjPacket &p);
+  int size1(){return 2*sizeof(uint32_t);};
+  void read1(uint8_t *);
+  int size2(){return _nL*_nF*sizeof(T);};
+  void read2(uint8_t *);
 private:
-  unsigned int _nL,_nF;
+  uint32_t _nL,_nF;
   std::vector<std::vector<T> > _frame;
 };
 
@@ -104,21 +110,44 @@ Frame<T> &Frame<T>::operator+=(const Frame<T> &f){
 
 template<class T>
 void Frame<T>::write(amjPacket &p) const{
-  p.resize(2*sizeof(unsigned int)+_nL*_nF*sizeof(T));
-  memcpy(p._data(),&_nL,sizeof(unsigned int));
-  memcpy(p._data()+sizeof(unsigned int),&_nF,sizeof(unsigned int));
-  for(unsigned int iL=0;iL<_nL;iL++)
-    memcpy(p._data()+2*sizeof(unsigned int)+iL*_nF*sizeof(T),_frame[iL].data(),_nF*sizeof(T));
+  p.resize(2*sizeof(uint32_t)+_nL*_nF*sizeof(T));
+  memcpy(p._data(),&_nL,sizeof(uint32_t));
+  memcpy(p._data()+sizeof(uint32_t),&_nF,sizeof(uint32_t));
+  for(uint32_t iL=0;iL<_nL;iL++)
+    memcpy(p._data()+2*sizeof(uint32_t)+iL*_nF*sizeof(T),_frame[iL].data(),_nF*sizeof(T));
+}
+
+template<class T>
+void Frame<T>::write(uint8_t *p) const{
+  memcpy(p,&_nL,sizeof(uint32_t));
+  memcpy(p+sizeof(uint32_t),&_nF,sizeof(uint32_t));
+  for(uint32_t iL=0;iL<_nL;iL++)
+    memcpy(p+2*sizeof(uint32_t)*iL*_nF*sizeof(T),_frame[iL].data(),_nF*sizeof(T));
 }
 
 template<class T>
 void Frame<T>::read(amjPacket &p){
-  memcpy(&_nL,p._data(),sizeof(unsigned int));
-  memcpy(&_nF,p._data()+sizeof(unsigned int),sizeof(unsigned int));
+  memcpy(&_nL,p._data(),sizeof(uint32_t));
+  memcpy(&_nF,p._data()+sizeof(uint32_t),sizeof(uint32_t));
   _frame.resize(_nL);
-  for(unsigned int iL=0;iL<_nL;iL++){
+  for(uint32_t iL=0;iL<_nL;iL++){
     _frame[iL].resize(_nF);
-    memcpy(_frame[iL].data(),p._data()+2*sizeof(unsigned int)+iL*_nF*sizeof(T),_nF*sizeof(T));
+    memcpy(_frame[iL].data(),p._data()+2*sizeof(uint32_t)+iL*_nF*sizeof(T),_nF*sizeof(T));
+  }
+}
+
+template<class T>
+void Frame<T>::read1(uint8_t *p){
+  memcpy(&_nL,p,sizeof(uint32_t));
+  memcpy(&_nF,p+sizeof(uint32_t),sizeof(uint32_t));
+}
+
+template<class T>
+void Frame<T>::read2(uint8_t *p){
+  _frame.resize(_nL);
+  for(uint32_t iL=0;iL<_nL;iL++){
+    _frame[iL].resize(_nF);
+    memcpy(_frame[iL].data(),p+2*sizeof(uint32_t)+iL*_nF*sizeof(T),_nF*sizeof(T));
   }
 }
 
