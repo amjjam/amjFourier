@@ -19,6 +19,7 @@ class Frame:public amjPacketRW{
 public:
   Frame(int nL,int nF);
   ~Frame(){};
+  void resize(int nL, int nF);
   unsigned int nL() const {return _nL;}
   unsigned int nF() const {return _nF;}
   void clear();
@@ -43,6 +44,11 @@ private:
 
 template<class T>
 Frame<T>::Frame(int nL, int nF):_nL(nL),_nF(nF){
+  resize(nL,nF);
+}
+
+template<class T>
+void Frame<T>::resize(int nL, int nF){
   _frame.resize(nL);
   for(int iL=0;iL<nL;iL++)
     _frame[iL].resize(nF);
