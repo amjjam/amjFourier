@@ -26,7 +26,8 @@ public:
   template<class U>
   Frame<T> &operator=(const Frame<U> &);
   Frame<T> &operator*=(double);
-  Frame<T> &operator+=(const Frame<T> &);
+  template<class U>
+  Frame<T> &operator+=(const Frame<U> &);
   std::vector<T> &operator[](int iL){return _frame[iL];};
   const std::vector<T> &operator[](int iL) const {return _frame[iL];};
   virtual void write(amjPacket &p) const;
@@ -67,11 +68,13 @@ void Frame<T>::clear(){
 template<class T>
 template<class U>
 Frame<T> &Frame<T>::operator=(const Frame<U> &f){
-  _nL=f._nL;
-  _nF=f._nF;
+  _nL=f.nL();
+  _nF=f.nF();
   _frame.resize(_nL);
-  for(int iL=0;iL<nL;iL++)
-    _frame[iL]=f._frame[iL];
+  for(unsigned int iL=0;iL<_nL;iL++)
+    for(unsigned int iF=0;iF<_nF;iF++)
+      _frame[iL][iF]=f[iL][iF];
+  return *this;
 }
 
 template<class T>
@@ -83,11 +86,30 @@ Frame<T> &Frame<T>::operator*=(double f){
 }
 
 template<class T>
-Frame<T> &Frame<T>::operator+=(const Frame<T> &f){
-  for(int iL=0;iL<nL;iL++)
-    for(int iF=0;iF<nF;iF++)
+template<class U>
+Frame<T> &Frame<T>::operator+=(const Frame<U> &f){
+  for(unsigned int iL=0;iL<_nL;iL++)
+    for(unsigned int iF=0;iF<_nF;iF++)
       _frame[iL][iF]+=f[iL][iF];
   return *this;
+}
+
+template<class T>
+Frame<T> operator/(const Frame<T> &f, double d){
+  Frame<T> r=f;
+  for(unsigned int iL=0;iL<r.nL();iL++)
+    for(unsigned int iF=0;iF<r.nF();iF++)
+      r[iL][iF]=f[iL][iF]/d;
+  return r;
+}
+
+template<class T, class U>
+Frame<T> operator-(const Frame<T> &p, const Frame<U> &m){
+  Frame<T> r=p;
+  for(unsigned int iL=0;iL<r.nL();iL++)
+    for(unsigned int iF=0;iF<r.nF();iF++)
+      r[iL][iF]=p[iL][iF]-m[iL][iF];
+  return r;
 }
 
 // template<class T, class U>
@@ -130,7 +152,7 @@ void Frame<T>::write(uint8_t *p) const{
   memcpy(p,&_nL,sizeof(uint32_t));
   memcpy(p+sizeof(uint32_t),&_nF,sizeof(uint32_t));
   for(uint32_t iL=0;iL<_nL;iL++)
-    memcpy(p+2*sizeof(uint32_t)*iL*_nF*sizeof(T),_frame[iL].data(),_nF*sizeof(T));
+    memcpy(p+2*sizeof(uint32_t)+iL*_nF*sizeof(T),_frame[iL].data(),_nF*sizeof(T));
 }
 
 template<class T>
@@ -155,7 +177,7 @@ void Frame<T>::read2(uint8_t *p){
   _frame.resize(_nL);
   for(uint32_t iL=0;iL<_nL;iL++){
     _frame[iL].resize(_nF);
-    memcpy(_frame[iL].data(),p+2*sizeof(uint32_t)+iL*_nF*sizeof(T),_nF*sizeof(T));
+    memcpy(_frame[iL].data(),p+iL*_nF*sizeof(T),_nF*sizeof(T));
   }
 }
 
