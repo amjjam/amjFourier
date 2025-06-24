@@ -71,9 +71,11 @@ Frame<T> &Frame<T>::operator=(const Frame<U> &f){
   _nL=f.nL();
   _nF=f.nF();
   _frame.resize(_nL);
-  for(unsigned int iL=0;iL<_nL;iL++)
+  for(unsigned int iL=0;iL<_nL;iL++){
+    _frame[iL].resize(_nF);
     for(unsigned int iF=0;iF<_nF;iF++)
       _frame[iL][iF]=f[iL][iF];
+  }
   return *this;
 }
 
@@ -88,6 +90,12 @@ Frame<T> &Frame<T>::operator*=(double f){
 template<class T>
 template<class U>
 Frame<T> &Frame<T>::operator+=(const Frame<U> &f){
+  if(_nL!=f.nL()||_nF!=f.nF()){
+    std::cout << "Frame<T>: frame dimensions do not match: (_nL,_nF)=(" << _nL
+	      << "," << _nF << ") and (f.nL,f.nF)=(" << f.nL() << "," << f.nF
+	      << ")" << std::endl;
+    abort();
+  }
   for(unsigned int iL=0;iL<_nL;iL++)
     for(unsigned int iF=0;iF<_nF;iF++)
       _frame[iL][iF]+=f[iL][iF];
