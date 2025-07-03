@@ -6,6 +6,7 @@
 
 #include <vector>
 #include <cstdint>
+#include <iostream>
 
 #include <complex>
 
@@ -295,7 +296,7 @@ public:
 		 [](int i)->double{return 1/(1+(1/2.5-1)/256*i);});
   ~FourierCompute(){};
   void resizephasors(PhasorSets &phasors);
-  void phasors(const Frame<uint16_t> &frame, PhasorSets &);
+  void phasors(const Frame<double> &frame, PhasorSets &);
 private:
   int nL; // number of wavelengths
   int nF; // number of pixels in fringe direction

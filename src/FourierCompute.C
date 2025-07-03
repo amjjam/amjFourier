@@ -26,7 +26,7 @@ FourierCompute::FourierCompute(int nL, int nF,
   }
 }
 
-void FourierCompute::phasors(const Frame<uint16_t> &frame,PhasorSets &phasors){
+void FourierCompute::phasors(const Frame<double> &frame,PhasorSets &phasors){
   phasors.resize(periods.size());
   int i1,iL,i2,iF,i3;
   float real,imag;
