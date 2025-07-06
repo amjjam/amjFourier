@@ -19,6 +19,8 @@ template<class T>
 class Frame:public amjPacketRW{
 public:
   Frame(int nL=1,int nF=1);
+  template<class U>
+  Frame(const Frame<U> &);
   ~Frame(){};
   void resize(int nL, int nF);
   unsigned int nL() const {return _nL;}
@@ -47,6 +49,12 @@ private:
 template<class T>
 Frame<T>::Frame(int nL, int nF):_nL(nL),_nF(nF){
   resize(nL,nF);
+}
+
+template<class T>
+template<class U>
+Frame<T>::Frame(const Frame<U> &f){
+  operator=(f);
 }
 
 template<class T>
@@ -82,8 +90,8 @@ Frame<T> &Frame<T>::operator=(const Frame<U> &f){
 
 template<class T>
 Frame<T> &Frame<T>::operator*=(double f){
-  for(int iL=0;iL<nL;iL++)
-    for(int iF=0;iF<nF;iF++)
+  for(int iL=0;iL<_nL;iL++)
+    for(int iF=0;iF<_nF;iF++)
       _frame[iL][iF]*=f;
   return *this;
 }
@@ -93,7 +101,7 @@ template<class U>
 Frame<T> &Frame<T>::operator+=(const Frame<U> &f){
   if(_nL!=f.nL()||_nF!=f.nF()){
     std::cout << "Frame<T>: frame dimensions do not match: (_nL,_nF)=(" << _nL
-	      << "," << _nF << ") and (f.nL,f.nF)=(" << f.nL() << "," << f.nF
+	      << "," << _nF << ") and (f.nL,f.nF)=(" << f.nL() << "," << f.nF()
 	      << ")" << std::endl;
     abort();
   }
