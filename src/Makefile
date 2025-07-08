@@ -12,7 +12,7 @@ endif
 LIBS=-lamjCom -lamjInterferometry
 LDFLAGS=-L$(prefix_amjCom)/lib -L$(prefix_amjInterferometry)/lib
 
-FLAGS=-Wall -g -O3 -fPIC -I$(prefix_amjCom)/include -I$(prefix_amjInterferometry)/include
+FLAGS=-Wall -g -O3 -fPIC -I$(prefix_amjCom)/include -I$(prefix_amjCom)/include/amjCom -I$(prefix_amjInterferometry)/include
 CPPFLAGS=$(FLAGS)
 
 
