@@ -253,11 +253,12 @@ namespace amjFourier{
     double sinc(double x) const {if(fabs(x)<1e-6) return 1-x*x/6; return sin(x)/x;};
   };
   
+  double wavelength(int i);
+
   class Phasors{
   public:
-    Phasors(int nL, int nF, const std::vector<float> &periods,
-	    std::function<double(int)> wavelength=
-	    [](int i)->double{return 1/(1+(1/2.5-1)/256*i);});
+    Phasors(int nL, int nF, const std::vector<float> &periods={3.34},
+	    std::function<double(int)> wavelength=amjFourier::wavelength);
     ~Phasors(){};
     //void resizephasors(PhasorSets &phasors);
     void operator()(const Frame<double> &frame, PhasorSets &);
@@ -271,8 +272,6 @@ namespace amjFourier{
   };
   
   
-  double wavelength(int i);
-
 }
 
 #endif /* _FOURIERSIM_H_ */

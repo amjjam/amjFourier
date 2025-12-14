@@ -1,5 +1,4 @@
 #include "../include/amjFourier.H"
-#include "../include/Frame.H"
 
 #include <stdio.h>
 #include <math.h>
