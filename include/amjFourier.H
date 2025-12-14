@@ -216,11 +216,13 @@ namespace amjFourier{
     std::complex<double> (*_visibility)(double);
   };
   
+  double wavelength(int i);
+
   class Sim{
   public:
     Sim(const std::vector<Beam> &beams,const std::vector<Baseline> &baselines,
 	       int nL=256, int nF=320, 
-	       std::function<double(int)> wavelength=[](int i)->double{return 1/(1+(1/2.5-1)/256*i);},
+	std::function<double(int)> wavelength=amjFourier::wavelength,
 	       std::function<double(int)> bandpass=[](int i)->double{return (1/(1+(1/2.5-1)/256*(i+1))-1/(1+(1/2.5-1)/256*(i-1)));},
 	       double d=24, double f1=1203,double d2=52.5, double f2=44);
     ~Sim();
@@ -253,8 +255,6 @@ namespace amjFourier{
     double sinc(double x) const {if(fabs(x)<1e-6) return 1-x*x/6; return sin(x)/x;};
   };
   
-  double wavelength(int i);
-
   class Phasors{
   public:
     Phasors(int nL, int nF, const std::vector<float> &periods={3.34},
