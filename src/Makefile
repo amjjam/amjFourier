@@ -16,10 +16,10 @@ FLAGS=-Wall -g -O3 -fPIC -I$(prefix_amjCom)/include -I$(prefix_amjCom)/include/a
 CPPFLAGS=$(FLAGS)
 
 
-SIM_SRC=main.C Sim.C
+SIM_SRC=main.C amjFourier.C
 SIM_OBJ=$(SIM_SRC:.C=.o)
 
-AMJFOURIER_SRC=Sim.C Frame.C Compute.C
+AMJFOURIER_SRC=amjFourier.C
 AMJFOURIER_OBJ=$(AMJFOURIER_SRC:.C=.o)
 
 CPP=g++ $(CPPFLAGS)
