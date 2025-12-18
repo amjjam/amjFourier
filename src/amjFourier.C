@@ -1,4 +1,5 @@
 #include "../include/amjFourier.H"
+#include<iostream>
 
 namespace amjFourier{
   Sim::Sim(const std::vector<Beam> &beams,
@@ -18,12 +19,11 @@ namespace amjFourier{
   Sim::~Sim(){
   }
 
-#include<iostream>
   int Sim::frame(double t, Frame<double> &frame, double &nn,
 		 std::vector<double> &n, std::vector<double> &nv,
 		 std::vector<double> &nv2) const{
     if((int)frame.nL()!=nL||(int)frame.nF()!=nF){
-      std::cout << "FourierSim: Frame size mismatch: in simulator (nL,nF)=("
+      std::cerr << "FourierSim: Frame size mismatch: in simulator (nL,nF)=("
 		<< nL << "," << nF << "), in frame (" << frame.nL() << ","
 		<< frame.nF() << ")" << std::endl;
       abort();
@@ -118,15 +118,13 @@ namespace amjFourier{
     bi2.resize(baselines.size());
     for(iB=0;iB<baselines.size();iB++){
       for(iBeam=0;iBeam<beams.size();iBeam++){
-	//std::cout << &beams[iBeam] << " " << &baselines[iB].beam1() << std::endl;
 	if(&beams[iBeam]==&baselines[iB].beam1()){
 	  bi1[iB]=iBeam;
-	  //std::cout << "found" << std::endl;
 	  break;
 	}
       }
       if(iBeam==beams.size()){
-	std::cout << "Could not find beam1 of baseline " << iB << std::endl;
+	std::cerr << "Could not find beam1 of baseline " << iB << std::endl;
 	abort();
       }
       for(iBeam=0;iBeam<beams.size();iBeam++)
@@ -135,7 +133,7 @@ namespace amjFourier{
 	  break;
 	}
       if(iBeam==beams.size()){
-	std::cout << "Could not find beam2 of baseline " << iB << std::endl;
+	std::cerr << "Could not find beam2 of baseline " << iB << std::endl;
 	abort();
       }
     }
@@ -171,8 +169,7 @@ namespace amjFourier{
 #include <math.h>
 #define PI 3.141592654
   
-  float poidev(float xm, long *idum)
-  {
+  float poidev(float xm, long *idum){
     float gammln(float xx);
     float ran1(long *idum);
     static float sq,alxm,g,oldm=(-1.0);
@@ -212,8 +209,7 @@ namespace amjFourier{
   
 #include <math.h>
   
-  float gammln(float xx)
-  {
+  float gammln(float xx){
     double x,y,tmp,ser;
     static double cof[6]={76.18009172947146,-86.50532032941677,
 			  24.01409824083091,-1.231739572450155,
@@ -239,8 +235,7 @@ namespace amjFourier{
 #define EPS 1.2e-7
 #define RNMX (1.0-EPS)
   
-  float ran1(long *idum)
-  {
+  float ran1(long *idum){
     int j;
     long k;
     static long iy=0;
@@ -277,7 +272,7 @@ namespace amjFourier{
 #undef NDIV
 #undef EPS
 #undef RNMX
-/* (C) Copr. 1986-92 Numerical Recipes Software 1)0. */
+  /* (C) Copr. 1986-92 Numerical Recipes Software 1)0. */
 
   float Sim::envelope(float delay, float L, float B) const{
     float y=M_PI*delay*B/L/L;
