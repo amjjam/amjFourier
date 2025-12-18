@@ -16,7 +16,7 @@ FLAGS=-Wall -g -O3 -fPIC -I$(prefix_amjCom)/include -I$(prefix_amjCom)/include/a
 CPPFLAGS=$(FLAGS)
 
 
-SIM_SRC=main.C amjFourier.C
+SIM_SRC=sim.C amjFourier.C
 SIM_OBJ=$(SIM_SRC:.C=.o)
 
 AMJFOURIER_SRC=amjFourier.C
