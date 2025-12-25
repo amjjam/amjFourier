@@ -279,11 +279,13 @@ namespace amjFourier{
     return sinc(y);
   }
 
-  // nL and nF are frame size in wavleength and fringe direction
-  // periods are the fringe periods at wavelength channel 0.
-  // dimension of periods is number of phasor sets (baselines) to compute
-  Phasors::Phasors(int nL, int nF,
-		   const std::vector<float> &periods,
+  
+  
+  // The dimension of periods is number of phasor sets (baselines) to
+  // compute. The values of periods is the period of the fringe in
+  // wavelength channel 255.  nL=100 is the number of wavelength
+  // channels to compute, starting from 255 going down.
+  Phasors::Phasors(const std::vector<float> &periods, int nL=100, 
 		   std::function<double(int)> wavelength)
     :nL(nL),nF(nF),wavelength(wavelength),periods(periods){
     c.resize(periods.size()*nL*nF);
@@ -294,7 +296,7 @@ namespace amjFourier{
       i1=iB*nL*nF;
       for(int iL=0;iL<nL;iL++){
 	i2=i1+iL*nF;
-	period=periods[iB]/wavelength(0)*wavelength(iL);
+	period=periods[iB]/wavelength(255)*wavelength(iL);
 	for(int iF=0;iF<nF;iF++){
 	  i3=i2+iF;
 	  f=2*M_PI*(iF-(float)(nF-1)/2)/period;
@@ -329,8 +331,12 @@ namespace amjFourier{
   }
   
   double wavelength(int i){ // returns wavelength in um for channel i
-    static const double c[5]={6.95694016e-06,-5.20602460e-03, 1.46461339e+00,
-			      -1.96798243e+02,1.28465801e+04};
+    // Coefficients from Paolo e-mail 9 October 2025
+    //static const double c[5]={6.95694016e-06,-5.20602460e-03, 1.46461339e+00,
+    //			      -1.96798243e+02,1.28465801e+04};
+    // Coefficients from Paolo e-mail 19 December 2025
+    static const double c[5]={-3.63299018e-06,3.46705393e-03,-1.17335426e+00,
+			      1.56363989e+02,-4.71516112e+03};
     double v=c[4];
     double p=i;
     for(int j=3;j>=0;j--){
