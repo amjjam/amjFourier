@@ -3,15 +3,10 @@
 
 namespace amjFourier{
   Sim::Sim(const std::vector<Beam> &beams,
-	   const std::vector<Baseline> &baselines,
-	   int nL, int nF,
-	   std::function<double(int)> wavelength,
-	   std::function<double(int)> bandpass,
-	   double d, double f1,
-	   double d2, double f2):
+	   const std::vector<Baseline> &baselines):
     beams(beams),baselines(baselines),
-    nL(nL),nF(nF),wavelength(wavelength),bandpass(bandpass),
-    d(d),f1(f1),d2(d2),f2(f2){
+    nL(NL),nF(NF),L0(0),F0(0),wL(NL),wF(NF),wavelength(amjFourier::wavelength),
+    bandpass(amjFourier::bandpass),d(24),f1(1203),d2(52.5),f2(44){
     m2=f2/(f2-d2); // Magnification in fringe direction by M2 (5.18)
     initialize();
   }
@@ -19,80 +14,46 @@ namespace amjFourier{
   Sim::~Sim(){
   }
 
-  int Sim::frame(double t, Frame<double> &frame, double &nn,
-		 std::vector<double> &n, std::vector<double> &nv,
-		 std::vector<double> &nv2) const{
-    if((int)frame.nL()!=nL||(int)frame.nF()!=nF){
-      std::cerr << "FourierSim: Frame size mismatch: in simulator (nL,nF)=("
-		<< nL << "," << nF << "), in frame (" << frame.nL() << ","
-		<< frame.nF() << ")" << std::endl;
-      abort();
-    }
-    
-    int iB1,iB2;
-    int iL,iF;
-    float L,B,fdelay1,delay2,delay;
-    std::complex<float> V0,V;
-    int i,j;
-    n.resize(baselines.size());
-    nv.resize(baselines.size());
-    nv2.resize(baselines.size());
-    
-    // Clear the frame
-    frame.clear();
-    
-    // Frame illumination
-    nn=0;
-    for(iL=0;iL<nL;iL++)
-      for(iF=0;iF<nF;iF++)
-	nn+=frame[iL][iF]=illumination[iL*nF+iF];
-    
-    // Fringes
-    for(unsigned int iB=0;iB<baselines.size();iB++){
-      iB1=bi1[iB];
-      iB2=bi2[iB];
-      fdelay1=(beams[iB1].x()-beams[iB2].x())/f1/m2;
-      delay2=beams[iB2].delay(0)-beams[iB1].delay(0);
-      n[iB]=0;
-      nv[iB]=0;
-      nv2[iB]=0;
-      for(iL=0;iL<nL;iL++){
-	L=wavelength(iL);
-	B=bandpass(iL);
-	V0=baselines[iB].visibility(L);
-	i=iL*nF;
-	for(iF=0;iF<nF;iF++){
-	  j=i+iF;
-	  delay=fdelay1*x(iF)+delay2;
-	  V=V0*envelope(delay,L,B);
-	  n[iB]+=airys[iB1][j]+airys[iB2][j];
-	  nv[iB]+=2*sqrt(airys[iB1][j]*airys[iB2][j])*fabs(V);
-	  nv2[iB]+=2*sqrt(airys[iB1][j]*airys[iB2][j])*fabs(V)*fabs(V);
-	  frame[iL][iF]+=2*sqrt(airys[iB1][j]*airys[iB2][j])*fabs(V)
-	    *cos(2*M_PI*delay/L+std::arg(V));
-	}
-      }
-    }
-    return 0;      
+  void Sim::set_wavelength(std::function<double(double)> w){
+    wavelength=w;
+    initialize();
   }
+
+  void Sim::set_bandpass(std::function<double(double)> b){
+    bandpass=b;
+    initialize();
+  }
+
+  void Sim::set_center(std::function<double(double)> c){
+    center=c;
+    initialize();
+  }
+
+  void Sim::set_window(unsigned int L0_, unsigned int F0_, unsigned int wL_,
+		       unsigned int wF_){
+    L0=L0_; F0=F0_; wL=wL_; wF=wF_;
+    initialize();
+  }
+  
   
   void Sim::initialize(){
     // Compute airys for beams
     airys.resize(beams.size());
     unsigned int iB;
-    int iL,iF;
+    unsigned int iL,iF; // pixel location in the window
+    unsigned int jL,jF; // pixel location in the frame
     int i;
     float yyy,Ic,yy,y,L,tmp;
     for(iB=0;iB<beams.size();iB++){
-      airys[iB].resize(nL*nF);
+      airys[iB].resize(wL*wF);
       yyy=M_PI*beams[iB].D()/f1/m2;
-      for(iL=0;iL<nL;iL++){
-	i=iL*nF;
-	L=wavelength(iL);
+      for(iL=0,jL=L0;iL<wL;iL++,jL++){
+	i=iL*wF;
+	L=wavelength(jL);
 	Ic=beams[iB].illumination(L);
 	yy=yyy/L;
-	for(iF=0;iF<nF;iF++){
-	  y=yy*x(iF);
+	for(iF=0,jF=F0;iF<wF;iF++,jF++){
+	  y=yy*x(jF);
 	  if(fabs(y)<1e-6)
 	    airys[iB][i+iF]=Ic;
 	  else{
@@ -106,9 +67,9 @@ namespace amjFourier{
     // Compute total illumination as sum of beam airys
     illumination.resize(nL*nF,0);
     for(iB=0;iB<beams.size();iB++)
-      for(iL=0;iL<nL;iL++){
-	i=iL*nF;
-	for(iF=0;iF<nF;iF++)
+      for(iL=0;iL<wL;iL++){
+	i=iL*wF;
+	for(iF=0;iF<wF;iF++)
 	  illumination[i+iF]+=airys[iB][i+iF];
       }
     
@@ -146,10 +107,12 @@ namespace amjFourier{
     
     if ((ax=fabs(x)) < 8.0) {
       y=x*x;
-      ans1=x*(72362614232.0+y*(-7895059235.0+y*(242396853.1
-						+y*(-2972611.439+y*(15704.48260+y*(-30.16036606))))));
-      ans2=144725228442.0+y*(2300535178.0+y*(18583304.74
-					     +y*(99447.43394+y*(376.9991397+y*1.0))));
+      ans1=x*(72362614232.0
+	      +y*(-7895059235.0
+		  +y*(242396853.1
+		      +y*(-2972611.439+y*(15704.48260+y*(-30.16036606))))));
+      ans2=144725228442.0
+	+y*(2300535178.0+y*(18583304.74+y*(99447.43394+y*(376.9991397+y*1.0))));
       ans=ans1/ans2;
     } else {
       z=8.0/ax;
@@ -279,27 +242,77 @@ namespace amjFourier{
     return sinc(y);
   }
 
+  Phasors::Phasors():nL(NL),nF(NF),L0(0),F0(0),wL(nL),wF(nF),
+		     c0(0),c1(255),cAvg(1),
+		     wavelength(amjFourier::wavelength),
+		     center(amjFourier::center),periods({3.34}){
+    initialize();
+  }
+
+  void Phasors::set_wavelength(std::function<double(double)> w){
+    wavelength=w;
+    initialize();
+  }
+
+  void Phasors::set_center(std::function<double(double)> c){
+    center=c;
+    initialize();
+  }
+
+  void Phasors::set_channels(unsigned int c0_, unsigned int c1_){
+    c0=c0_; c1=c1_;
+    initialize();
+  }
   
+  void Phasors::set_periods(std::vector<double> p){
+    periods=p;
+    initialize();
+  }
+
+  void Phasors::set_channel_averaging(unsigned int cAvg_){
+    cAvg=cAvg_;
+    initialize();
+  }
   
   // The dimension of periods is number of phasor sets (baselines) to
   // compute. The values of periods is the period of the fringe in
   // wavelength channel 255.  nL=100 is the number of wavelength
   // channels to compute, starting from 255 going down.
-  Phasors::Phasors(const std::vector<float> &periods, int nL=100, 
-		   std::function<double(int)> wavelength)
-    :nL(nL),nF(nF),wavelength(wavelength),periods(periods){
-    c.resize(periods.size()*nL*nF);
-    s.resize(periods.size()*nL*nF);
+  // Phasors::Phasors(const std::vector<float> &periods, int nL=100, 
+  // 		   std::function<double(double)> wavelength)
+  //   :nL(nL),nF(nF),wavelength(wavelength),periods(periods){
+  //   c.resize(periods.size()*nL*nF);
+  //   s.resize(periods.size()*nL*nF);
+  //   int i1,i2,i3;
+  //   float period,f;
+  //   for(unsigned int iB=0;iB<periods.size();iB++){
+  //     i1=iB*nL*nF;
+  //     for(int iL=0;iL<nL;iL++){
+  // 	i2=i1+iL*nF;
+  // 	period=periods[iB]/wavelength(255)*wavelength(iL);
+  // 	for(int iF=0;iF<nF;iF++){
+  // 	  i3=i2+iF;
+  // 	  f=2*M_PI*(iF-(float)(nF-1)/2)/period;
+  // 	  c[i3]=cos(f);
+  // 	  s[i3]=sin(f);
+  // 	}
+  //     }
+  //   }
+  // }
+
+  void Phasors::initialize(){
+    c.resize(periods.size()*wL*wF);
+    s.resize(periods.size()*wL*wF);
     int i1,i2,i3;
     float period,f;
     for(unsigned int iB=0;iB<periods.size();iB++){
-      i1=iB*nL*nF;
-      for(int iL=0;iL<nL;iL++){
-	i2=i1+iL*nF;
-	period=periods[iB]/wavelength(255)*wavelength(iL);
-	for(int iF=0;iF<nF;iF++){
+      i1=iB*wL*wF;
+      for(unsigned int iL=0,jL=L0;iL<nL;iL++,jL++){
+	i2=i1+iL*wF;
+	period=periods[iB]/wavelength(NL-1)*wavelength(jL);
+	for(unsigned int iF=0,jF=F0;iF<nF;iF++,jF++){
 	  i3=i2+iF;
-	  f=2*M_PI*(iF-(float)(nF-1)/2)/period;
+	  f=2*M_PI*(jF-center(jL))/period;
 	  c[i3]=cos(f);
 	  s[i3]=sin(f);
 	}
@@ -307,30 +320,7 @@ namespace amjFourier{
     }
   }
   
-  // 
-  void Phasors::operator()(const Frame<double> &frame,PhasorSets &phasors){
-    phasors.resize(periods.size());
-    int i1,iL,i2,iF,i3;
-    float real,imag;
-    for(unsigned int iB=0;iB<periods.size();iB++){
-      i1=iB*nL*nF;
-      phasors[iB].resize(frame.nL());
-      for(iL=0;iL<nL;iL++){
-	i2=i1+iL*nF;
-	real=0;
-	imag=0;
-	for(iF=0;iF<nF;iF++){
-	  i3=i2+iF;
-	  real+=frame[iL][iF]*c[i3];
-	  imag+=frame[iL][iF]*s[i3];
-	}
-	phasors[iB][iL].real(real);
-	phasors[iB][iL].imag(imag);
-      }
-    }
-  }
-  
-  double wavelength(int i){ // returns wavelength in um for channel i
+  double wavelength(double i){ // returns wavelength in um for channel i
     // Coefficients from Paolo e-mail 9 October 2025
     //static const double c[5]={6.95694016e-06,-5.20602460e-03, 1.46461339e+00,
     //			      -1.96798243e+02,1.28465801e+04};
@@ -345,4 +335,15 @@ namespace amjFourier{
     }
     return v;
   }
+
+  double bandpass(double i){ // Return bandpass in um for channel i.
+    // Current model is that bandpass for channel i is difference in
+    // wavelength between channels i and i+1
+    return fabs(wavelength(i+1)-wavelength(i));
+  }
+
+  double center(double i){
+    return 125;
+  }
+
 }

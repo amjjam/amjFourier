@@ -15,6 +15,10 @@
 
 #include <amjInterferometry.H>
 
+// Default number of pixels in the camera
+#define NL 256
+#define NF 320
+
 namespace amjFourier{
   template<class T>
   class Frame:public amjPacketRW{
@@ -216,61 +220,169 @@ namespace amjFourier{
     std::complex<double> (*_visibility)(double);
   };
   
-  double wavelength(int i);
-
   class Sim{
   public:
-    Sim(const std::vector<Beam> &beams,const std::vector<Baseline> &baselines,
-	       int nL=256, int nF=320, 
-	std::function<double(int)> wavelength=amjFourier::wavelength,
-	       std::function<double(int)> bandpass=[](int i)->double{return (1/(1+(1/2.5-1)/256*(i+1))-1/(1+(1/2.5-1)/256*(i-1)));},
-	       double d=24, double f1=1203,double d2=52.5, double f2=44);
+    Sim(const std::vector<Beam> &beams,const std::vector<Baseline> &baselines);
     ~Sim();
+    void set_wavelength(std::function<double(double)>);
+    void set_bandpass(std::function<double(double)>);
+    void set_center(std::function<double(double)>);
+    void set_window(unsigned int L0, unsigned int F0, unsigned int wL,
+		    unsigned int wF);
     void dim(int &_nL, int &_nF){_nL=nL;_nF=nF;};
-    int frame(double t, Frame<double> &, double &, std::vector<double> &, std::vector<double> &, std::vector<double> &) const;
-    // Fringe direction position as a function of pixel number. Pixel 0 is center of left-most pixel,
-    // pixel -0.5 is left side of left-most pixel, pixel NF-1 is center of right-most pixel, and
-    // pixel NF-0.5 is right side of right-most pixel. etc... returned position is relative to center
-    // of row which is pixel number (-0.5+NF-0.5)/2=(NF-1)/2
+    template<typename T>
+    void operator()(double t, Frame<T> &);
+    template<typename T>
+    int frame(double t, Frame<T> &, double &, std::vector<double> &, std::vector<double> &, std::vector<double> &) const;
+    // Fringe direction position as a function of pixel number. Pixel
+    // 0 is center of left-most pixel, pixel -0.5 is left side of
+    // left-most pixel, pixel NF-1 is center of right-most pixel, and
+    // pixel NF-0.5 is right side of right-most pixel. etc... returned
+    // position is relative to center of row which is pixel number
+    // (-0.5+NF-0.5)/2=(NF-1)/2
     double x(double iF) const {return ((double)iF-((double)nF-1)/2)*d;};
   private:
     const std::vector<Beam> &beams; // reference to vector of beams
     const std::vector<Baseline> &baselines; // reference to vector of baselines
     std::vector<int> bi1; // index into beams of beam1 for each baseline
     std::vector<int> bi2; // index into beams of beam2 for each baseline
-    int nL,nF; // Number of pixels in wavelength and fringe direction
-    std::function<double(int)> wavelength; // Wavelength in microns
-    std::function<double(int)> bandpass; // Bandpass in microns
+    unsigned int nL,nF; // Detector pixels in wavelength and fringe direction
+    unsigned int L0,F0; // Window start corner
+    unsigned int wL,wF; // Window pixels in wavelength and fringe direction
+    std::function<double(double)> wavelength; // Wavelength in microns for ch
+    std::function<double(double)> bandpass; // Bandpass in microns for ch
+    std::function<double(double)> center; // Center of fringes for ch
     double d; // Pixel size in wavelength direction in microns
     double f1; // Focal length of M1 in mm
     double d2; // Distance from M1 focus to M2 in mm
     double f2; // Focal length of M2 in mm
     double m2; // Magnification in fringe direction by M2
-    std::vector<std::vector<float> > airys; // Airy patterns from beams [nBeam][nL*nF]
-    std::vector<float> illumination; // Sum of airy patterns [nL*nF];
-    std::vector<std::vector<float> > airys2; // Airy patterns from baselines [nBaselines][2][nL*nF]
+    std::vector<std::vector<float> > airys; // Airy patterns from beams [nBeam][wL*wF]
+    std::vector<float> illumination; // Sum of airy patterns [wL*wF];
+    std::vector<std::vector<float> > airys2; // Airy patterns from baselines [nBaselines][2][wL*wF]
     void initialize();
     double bessj1(double x) const;  
     float envelope(float delay, float B, float L) const;
     double sinc(double x) const {if(fabs(x)<1e-6) return 1-x*x/6; return sin(x)/x;};
   };
   
+  template<typename T>
+  void Sim::operator()(double t, Frame<T> &frame){
+    if(frame.nL()!=wL||frame.nF()!=wF)
+      frame.resize(wL,wF);
+    
+    unsigned int iB1,iB2;
+    unsigned int iL,iF; // pixel location in the window
+    unsigned int jL,jF; // pixel location in the frame
+    float L,B,fdelay1,delay2,delay;
+    std::complex<float> V0,V;
+    int i,j;
+    //n.resize(baselines.size());
+    //nv.resize(baselines.size());
+    //nv2.resize(baselines.size());
+    
+    // Clear the frame
+    frame.clear();
+    
+    // Frame illumination
+    //nn=0;
+    for(iL=0;iL<wL;iL++)
+      for(iF=0;iF<wF;iF++)
+	/*nn+=*/frame[iL][iF]=illumination[iL*wF+iF];
+    
+    // Fringes
+    for(unsigned int iB=0;iB<baselines.size();iB++){
+      iB1=bi1[iB];
+      iB2=bi2[iB];
+      fdelay1=(beams[iB1].x()-beams[iB2].x())/f1/m2;
+      delay2=beams[iB2].delay(0)-beams[iB1].delay(0);
+      //n[iB]=0;
+      //nv[iB]=0;
+      //nv2[iB]=0;
+      for(iL=0,jL=L0;iL<nL;iL++,jL++){
+	L=wavelength(jL);
+	B=bandpass(jL);
+	V0=baselines[iB].visibility(L);
+	i=iL*wF;
+	for(iF=0,jF=F0;iF<nF;iF++,jF++){
+	  j=i+iF;
+	  delay=fdelay1*x(jF)+delay2;
+	  V=V0*envelope(delay,L,B);
+	  //n[iB]+=airys[iB1][j]+airys[iB2][j];
+	  //nv[iB]+=2*sqrt(airys[iB1][j]*airys[iB2][j])*fabs(V);
+	  //nv2[iB]+=2*sqrt(airys[iB1][j]*airys[iB2][j])*fabs(V)*fabs(V);
+	  frame[iL][iF]+=2*sqrt(airys[iB1][j]*airys[iB2][j])*fabs(V)
+	    *cos(2*M_PI*delay/L+std::arg(V));
+	}
+      }
+    }     
+  }
+  
   class Phasors{
   public:
-    Phasors(int nL, int nF, const std::vector<float> &periods={3.34},
-	    std::function<double(int)> wavelength=amjFourier::wavelength);
+    Phasors();
+    // Phasors(int nL, int nF, const std::vector<float> &periods={3.34},
+    // 	    std::function<double(int)> wavelength=amjFourier::wavelength);
     ~Phasors(){};
-    //void resizephasors(PhasorSets &phasors);
-    void operator()(const Frame<double> &frame, PhasorSets &);
+    // Wavelength in um from channel in camera frame coordinates
+    void set_wavelength(std::function<double(double)>);
+    // Center of fringe packet in camera frame coordinates
+    void set_center(std::function<double(double)>);
+    // Channels to use first, last, in window coordinates
+    void set_channels(unsigned int, unsigned int);
+    // Fringe periods at shortest wavelength = highest numbered
+    // channel, in camera frame
+    void set_periods(std::vector<double>);
+    // Number of consecutive channels to average
+    void set_channel_averaging(unsigned int);
+    template<typename T>
+    void operator()(int L0, int F0, const Frame<T> &frame, PhasorSets &);
   private:
-    int nL; // number of wavelengths
-    int nF; // number of pixels in fringe direction
-    std::function<double(int)> wavelength;
-    std::vector<float> periods; // [nB] - nB is number of baselines
+    unsigned int nL,nF; // number of pixels in camera in wavelength and fringe direction
+    unsigned int L0,F0; // location of (0,0) pixel of window in camera frame
+    unsigned int wL,wF; // number of pixels in window in wavelength and fringe direction
+    unsigned int c0,c1; // range of channels in window to use from c0 to c1, inclusive
+    unsigned int cAvg; // number of channels to average
+    std::function<double(double)> wavelength; // wavelength of camera row
+    std::function<double(double)> center; // center of fringe packet
+					  // in camera coordinates
+    std::vector<double> periods; // [nB] - nB is number of baselines
     std::vector<float> c; // [iB][iL][iF]
     std::vector<float> s; // [iB][iL][iF]
+    void initialize();
   };
-  
+
+  template<typename T>
+  void Phasors::operator()(int L0_, int F0_, const Frame<T> &frame,
+			   PhasorSets &phasors){
+    if(L0!=L0_||F0!=F0_||wL!=frame.nL()||wF!=frame.nF()){
+      L0=L0_; F0=F0_; wL=frame.nL(); wF=frame.nF();
+      initialize();
+    }
+    phasors.resize(periods.size());
+    int i1,iL,i2,iF,i3;
+    float real,imag;
+    for(unsigned int iB=0;iB<periods.size();iB++){
+      i1=iB*nL*nF;
+      phasors[iB].resize(frame.nL());
+      for(iL=0;iL<nL;iL++){
+	i2=i1+iL*nF;
+	real=0;
+	imag=0;
+	for(iF=0;iF<nF;iF++){
+	  i3=i2+iF;
+	  real+=frame[iL][iF]*c[i3];
+	  imag+=frame[iL][iF]*s[i3];
+	}
+	phasors[iB][iL].real(real);
+	phasors[iB][iL].imag(imag);
+      }
+    }
+  }
+ 
+  double wavelength(double i); // wavelength for channel i in um
+  double bandpass(double i); // bandpass for channel i in um
+  double center(double i); // center of fringes in channel i, in pixels
   
 }
 
