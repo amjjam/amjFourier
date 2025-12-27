@@ -12,12 +12,15 @@ endif
 LIBS=-lamjCom -lamjInterferometry
 LDFLAGS=-L$(prefix_amjCom)/lib -L$(prefix_amjInterferometry)/lib
 
-FLAGS=-Wall -g -O3 -fPIC -I$(prefix_amjCom)/include -I$(prefix_amjCom)/include/amjCom -I$(prefix_amjInterferometry)/include
+FLAGS=-Wall -g -fPIC -I$(prefix_amjCom)/include -I$(prefix_amjCom)/include/amjCom -I$(prefix_amjInterferometry)/include
 CPPFLAGS=$(FLAGS)
 
 
 SIM_SRC=sim.C amjFourier.C
 SIM_OBJ=$(SIM_SRC:.C=.o)
+
+VALIDATION_SRC=validation.C amjFourier.C
+VALIDATION_OBJ=$(VALIDATION_SRC:.C=.o)
 
 AMJFOURIER_SRC=amjFourier.C
 AMJFOURIER_OBJ=$(AMJFOURIER_SRC:.C=.o)
@@ -25,9 +28,12 @@ AMJFOURIER_OBJ=$(AMJFOURIER_SRC:.C=.o)
 CPP=g++ $(CPPFLAGS)
 
 
-all: libamjFourier.so sim
+all: libamjFourier.so sim validation
 
 sim: $(SIM_OBJ)
+	$(CPP) -o $@ $^ $(LDFLAGS) $(LIBS) -lamjArg
+
+validation: $(VALIDATION_OBJ)
 	$(CPP) -o $@ $^ $(LDFLAGS) $(LIBS)
 
 libamjFourier.so: $(AMJFOURIER_OBJ)
@@ -46,5 +52,5 @@ uninstall:
 	- rmdir $(prefix)/include
 
 clean:
-	- rm $(SIM_OBJ) sim $(AMJFOURIER_OBJ) libamjFourier.so
-
+	- rm $(SIM_OBJ) sim $(VALIDATION_OBJ) validation $(AMJFOURIER_OBJ) \
+	libamjFourier.so
