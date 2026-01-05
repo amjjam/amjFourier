@@ -2,21 +2,18 @@
 
 import numpy as np
 import matplotlib.pyplot as plt
+import frame
 
-def loadframe(filename):
-    f=open(filename,"rb")
-    nL=int.from_bytes(f.read(4),'little')
-    nF=int.from_bytes(f.read(4),'little')
-    return np.reshape(np.frombuffer(f.read(nL*nF*8),"<f8",count=nL*nF),(nL,nF))
+f=open("frame.dat","rb")
+d=frame.load(f)[0]
+f.close()
 
-frame=loadframe("frame.dat")
+print("nL=",d['nL']," nF=",d['nF']);
 
-figure,axis=plt.subplots(2,1,gridspec_kw={'height_ratios':[3,1]})
+plt.imshow(d['image'])#,aspect='auto',interpolation='none')
+plt.show()
 
-image=axis[0].imshow(frame[:,100:220],aspect='auto',interpolation='none',extent=[100,220,256,0])
-axis[0].set(ylabel="Wavelength direction")
-axis[1].plot(np.arange(100,220),frame[150,100:220])
-axis[1].set(xlabel="Fringe direction")
-#plt.colorbar(image,fraction=0.028,cax=axis[0,1])
+plt.plot(d['image'][99,:])
+plt.plot(d['image'][0,:])
 plt.show()
 
