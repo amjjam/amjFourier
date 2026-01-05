@@ -229,6 +229,9 @@ namespace amjFourier{
     void set_center(std::function<double(double)>);
     void set_window(unsigned int L0, unsigned int F0, unsigned int wL,
 		    unsigned int wF);
+    void set_max_wavelength(double);
+    template<typename U>
+    //void set_bias(std::function<double(int,int)> &);
     void dim(int &_nL, int &_nF){_nL=nL;_nF=nF;};
     template<typename T>
     void operator()(double t, Frame<T> &);
@@ -240,7 +243,7 @@ namespace amjFourier{
     // pixel NF-0.5 is right side of right-most pixel. etc... returned
     // position is relative to center of row which is pixel number
     // (-0.5+NF-0.5)/2=(NF-1)/2
-    double x(double iF) const {return ((double)iF-((double)nF-1)/2)*d;};
+    double x(double iL, double iF) const {return ((double)iF-center(iL))*d;};
   private:
     const std::vector<Beam> &beams; // reference to vector of beams
     const std::vector<Baseline> &baselines; // reference to vector of baselines
@@ -249,9 +252,11 @@ namespace amjFourier{
     unsigned int nL,nF; // Detector pixels in wavelength and fringe direction
     unsigned int L0,F0; // Window start corner
     unsigned int wL,wF; // Window pixels in wavelength and fringe direction
+    double max_wavelength; // Longest wavelength visible
     std::function<double(double)> wavelength; // Wavelength in microns for ch
     std::function<double(double)> bandpass; // Bandpass in microns for ch
     std::function<double(double)> center; // Center of fringes for ch
+    //std::function<double(int,int)> &bias; // makes bias frame
     double d; // Pixel size in wavelength direction in microns
     double f1; // Focal length of M1 in mm
     double d2; // Distance from M1 focus to M2 in mm
@@ -277,46 +282,47 @@ namespace amjFourier{
     float L,B,fdelay1,delay2,delay;
     std::complex<float> V0,V;
     int i,j;
-    //n.resize(baselines.size());
-    //nv.resize(baselines.size());
-    //nv2.resize(baselines.size());
     
     // Clear the frame
     frame.clear();
     
     // Frame illumination
-    //nn=0;
     for(iL=0;iL<wL;iL++)
       for(iF=0;iF<wF;iF++)
-	/*nn+=*/frame[iL][iF]=illumination[iL*wF+iF];
-    
+	frame[iL][iF]=illumination[iL*wF+iF];
+
     // Fringes
     for(unsigned int iB=0;iB<baselines.size();iB++){
       iB1=bi1[iB];
       iB2=bi2[iB];
       fdelay1=(beams[iB1].x()-beams[iB2].x())/f1/m2;
       delay2=beams[iB2].delay(0)-beams[iB1].delay(0);
-      //n[iB]=0;
-      //nv[iB]=0;
-      //nv2[iB]=0;
-      for(iL=0,jL=L0;iL<nL;iL++,jL++){
+      for(iL=0,jL=L0;iL<wL;iL++,jL++){
 	L=wavelength(jL);
 	B=bandpass(jL);
 	V0=baselines[iB].visibility(L);
 	i=iL*wF;
-	for(iF=0,jF=F0;iF<nF;iF++,jF++){
+	for(iF=0,jF=F0;iF<wF;iF++,jF++){
 	  j=i+iF;
-	  delay=fdelay1*x(jF)+delay2;
+	  delay=fdelay1*x(jL,jF)+delay2;
 	  V=V0*envelope(delay,L,B);
-	  //n[iB]+=airys[iB1][j]+airys[iB2][j];
-	  //nv[iB]+=2*sqrt(airys[iB1][j]*airys[iB2][j])*fabs(V);
-	  //nv2[iB]+=2*sqrt(airys[iB1][j]*airys[iB2][j])*fabs(V)*fabs(V);
 	  frame[iL][iF]+=2*sqrt(airys[iB1][j]*airys[iB2][j])*fabs(V)
 	    *cos(2*M_PI*delay/L+std::arg(V));
 	}
       }
     }     
   }
+
+  template<typename T>
+  class Bias{
+  public:
+    Bias();
+    ~Bias();
+    void seed(long);
+    T operator()(int,int);
+  private:
+    
+  };
   
   class Phasors{
   public:
@@ -383,7 +389,6 @@ namespace amjFourier{
   double wavelength(double i); // wavelength for channel i in um
   double bandpass(double i); // bandpass for channel i in um
   double center(double i); // center of fringes in channel i, in pixels
-  
 }
 
 #endif /* _FOURIERSIM_H_ */
