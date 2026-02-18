@@ -9,6 +9,7 @@
 #include <tuple>
 #include <functional>
   
+#include <cassert>
 
 #include <amjCom/amjPacketRW.H>
 #include <amjCom/amjPacket.H>
@@ -105,7 +106,7 @@ namespace amjFourier{
   template<class U>
   Frame<T> &Frame<T>::operator+=(const Frame<U> &f){
     if(_nL!=f.nL()||_nF!=f.nF()){
-      std::cout << "Frame<T>: frame dimensions do not match: (_nL,_nF)=(" << _nL
+      std::cerr << "Frame<T>: frame dimensions do not match: (_nL,_nF)=(" << _nL
 		<< "," << _nF << ") and (f.nL,f.nF)=(" << f.nL() << "," << f.nF()
 		<< ")" << std::endl;
       abort();
@@ -206,9 +207,10 @@ namespace amjFourier{
   
   class Baseline{
   public:
-    Baseline(const std::string &name, Beam &beam1, Beam &beam2,std::complex<double>(*visibility)(double)
+    Baseline(const std::string &name, Beam &beam1, Beam &beam2,
+	     std::function<std::complex<double>(double)> visibility
 	     =[](double L)->std::complex<double>{return 1;})
-      :_name(name),_beam1(beam1),_beam2(beam2),_visibility(visibility){};
+      :_name(name),_beam1(beam1),_beam2(beam2),_visibility(std::move(visibility)){};
     ~Baseline(){};
     std::string name(){return _name;};
     const Beam &beam1() const {return _beam1;}
@@ -217,7 +219,7 @@ namespace amjFourier{
   private:
     std::string _name;
     Beam &_beam1,&_beam2;
-    std::complex<double> (*_visibility)(double);
+    std::function<std::complex<double>(double)> _visibility;
   };
   
   class Sim{
@@ -324,30 +326,32 @@ namespace amjFourier{
     
   };
   
-  class Phasors{
+  class CalcPhasors{
   public:
-    Phasors();
-    // Phasors(int nL, int nF, const std::vector<float> &periods={3.34},
-    // 	    std::function<double(int)> wavelength=amjFourier::wavelength);
-    ~Phasors(){};
+    CalcPhasors();
+    ~CalcPhasors(){};
     // Wavelength in um from channel in camera frame coordinates
     void set_wavelength(std::function<double(double)>);
     // Center of fringe packet in camera frame coordinates
     void set_center(std::function<double(double)>);
-    // Channels to use first, last, in window coordinates
+    // Channels to use: first (lowest number), number of channels, in
+    // camera frame coordinates
     void set_channels(unsigned int, unsigned int);
     // Fringe periods at shortest wavelength = highest numbered
     // channel, in camera frame
     void set_periods(std::vector<double>);
-    // Number of consecutive channels to average
-    void set_channel_averaging(unsigned int);
-    template<typename T>
-    void operator()(int L0, int F0, const Frame<T> &frame, PhasorSets &);
+    // Number of consecutive channels to sum to produce fewer phasors
+    void set_channel_sum(unsigned int);
+    template<typename T, typename U>
+    void operator()(unsigned int L0, unsigned int F0, const Frame<T> &frame, std::vector<amjInterferometry::Phasors<U> > &);
   private:
     unsigned int nL,nF; // number of pixels in camera in wavelength and fringe direction
     unsigned int L0,F0; // location of (0,0) pixel of window in camera frame
     unsigned int wL,wF; // number of pixels in window in wavelength and fringe direction
-    unsigned int c0,c1; // range of channels in window to use from c0 to c1, inclusive
+    unsigned int C0,nC; // c0 is first channel to use for phasors, and
+			// nC is number of chanels from there. c0 is
+			// in camera frame
+    //unsigned int c0,c1; // range of channels in window to use from c0 to c1, inclusive
     unsigned int cAvg; // number of channels to average
     std::function<double(double)> wavelength; // wavelength of camera row
     std::function<double(double)> center; // center of fringe packet
@@ -358,35 +362,47 @@ namespace amjFourier{
     void initialize();
   };
 
-  template<typename T>
-  void Phasors::operator()(int L0_, int F0_, const Frame<T> &frame,
-			   PhasorSets &phasors){
+  template<typename T, typename U>
+  void CalcPhasors::operator()(unsigned int L0_, unsigned int F0_,
+			       const Frame<T> &frame,
+			       std::vector<amjInterferometry::Phasors<U> > &phasors){
     if(L0!=L0_||F0!=F0_||wL!=frame.nL()||wF!=frame.nF()){
       L0=L0_; F0=F0_; wL=frame.nL(); wF=frame.nF();
       initialize();
     }
     phasors.resize(periods.size());
-    int i1,iL,i2,iF,i3;
+    unsigned int i1,iL,i2,iF,i3;
     float real,imag;
+    unsigned int c0,c1,nP;
+    c0=(L0>C0?L0:C0)-L0; // use the larger
+    c1=(L0+wL<C0+nC?L0+wL:C0+nC)-L0; // use the smaller 
+    nP=(c1-c0)/cAvg;
     for(unsigned int iB=0;iB<periods.size();iB++){
-      i1=iB*nL*nF;
-      phasors[iB].resize(frame.nL());
-      for(iL=0;iL<nL;iL++){
-	i2=i1+iL*nF;
+      //i1=iB*nL*nF;
+      i1=iB*wL*wF;
+      phasors[iB].resize(nP);
+      for(unsigned int iP=0;iP<nP;iP++){
 	real=0;
 	imag=0;
-	for(iF=0;iF<nF;iF++){
-	  i3=i2+iF;
-	  real+=frame[iL][iF]*c[i3];
-	  imag+=frame[iL][iF]*s[i3];
+	for(iL=c0+iP*cAvg;iL<c0+(iP+1)*cAvg;iL++){
+	  //i2=i1+iL*nF;
+	  i2=i1+iL*wF;
+	  for(iF=0;iF<wF;iF++){
+	    i3=i2+iF;
+	    assert(i3 < c.size());
+	    real+=frame[iL][iF]*c[i3];
+	    imag+=frame[iL][iF]*s[i3];
+	  }
 	}
-	phasors[iB][iL].real(real);
-	phasors[iB][iL].imag(imag);
+	phasors[iB][iP].real(real);
+	phasors[iB][iP].imag(imag);
+	phasors[iB](iP)=wavelength(iL);
       }
     }
   }
- 
+  
   double wavelength(double i); // wavelength for channel i in um
+  double wavelength_lin(double i); // wavelength for channel i, linear in wavenumber 
   double bandpass(double i); // bandpass for channel i in um
   double center(double i); // center of fringes in channel i, in pixels
 }

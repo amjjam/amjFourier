@@ -42,7 +42,7 @@ namespace amjFourier{
   // }
   
   void Sim::initialize(){
-    std::cout << "wL=" << wL << ", wF=" << wF << std::endl;
+    //std::cout << "wL=" << wL << ", wF=" << wF << std::endl;
     // Compute airys for beams
     airys.resize(beams.size());
     unsigned int iB;
@@ -53,11 +53,11 @@ namespace amjFourier{
     for(iB=0;iB<beams.size();iB++){
       airys[iB].resize(wL*wF);
       yyy=M_PI*beams[iB].D()/f1/m2;
-      std::cout << "Beam " << iB << ":" << std::endl;
+      //std::cout << "Beam " << iB << ":" << std::endl;
       for(iL=0,jL=L0;iL<wL;iL++,jL++){
 	i=iL*wF;
 	L=wavelength(jL);
-	std::cout << "L(" << jL << ")=" << L << std::endl;
+	//std::cout << "L(" << jL << ")=" << L << std::endl;
 	Ic=beams[iB].illumination(L);
 	yy=yyy/L;
 	for(iF=0,jF=F0;iF<wF;iF++,jF++){
@@ -74,7 +74,7 @@ namespace amjFourier{
 	  }
 	}
       }
-      std::cout << std::endl << std::endl;
+      //std::cout << std::endl << std::endl;
     }
     
     // Compute total illumination as sum of beam airys
@@ -260,39 +260,39 @@ namespace amjFourier{
     return sinc(y);
   }
 
-  Phasors::Phasors():nL(NL),nF(NF),L0(0),F0(0),wL(nL),wF(nF),
-		     c0(0),c1(255),cAvg(1),
-		     wavelength(amjFourier::wavelength),
-		     center(amjFourier::center),periods({3.34}){
-    initialize();
-  }
-
-  void Phasors::set_wavelength(std::function<double(double)> w){
-    wavelength=w;
-    initialize();
-  }
-
-  void Phasors::set_center(std::function<double(double)> c){
-    center=c;
-    initialize();
-  }
-
-  void Phasors::set_channels(unsigned int c0_, unsigned int c1_){
-    c0=c0_; c1=c1_;
+  CalcPhasors::CalcPhasors():nL(NL),nF(NF),L0(0),F0(0),wL(nL),wF(nF),
+			     C0(0),nC(NF),cAvg(1),
+			     wavelength(amjFourier::wavelength),
+			     center(amjFourier::center),periods({3.34}){
     initialize();
   }
   
-  void Phasors::set_periods(std::vector<double> p){
+  void CalcPhasors::set_wavelength(std::function<double(double)> w){
+    wavelength=w;
+    initialize();
+  }
+  
+  void CalcPhasors::set_center(std::function<double(double)> c){
+    center=c;
+    initialize();
+  }
+  
+  void CalcPhasors::set_channels(unsigned int C0_, unsigned int nC_){
+    C0=C0_; nC=nC_;
+    initialize();
+  }
+  
+  void CalcPhasors::set_periods(std::vector<double> p){
     periods=p;
     initialize();
   }
 
-  void Phasors::set_channel_averaging(unsigned int cAvg_){
+  void CalcPhasors::set_channel_sum(unsigned int cAvg_){
     cAvg=cAvg_;
     initialize();
   }  
   
-  void Phasors::initialize(){
+  void CalcPhasors::initialize(){
     c.resize(periods.size()*wL*wF);
     s.resize(periods.size()*wL*wF);
     int i1,i2,i3;
@@ -310,6 +310,8 @@ namespace amjFourier{
 	}
       }
     }
+    assert(c.size() == periods.size() * nL * nF);
+assert(s.size() == periods.size() * nL * nF);
   }
   
   double wavelength(double i){ // returns wavelength in um for channel i
@@ -331,14 +333,22 @@ namespace amjFourier{
     return v;
   }
 
+  double wavelength_lin(double i){
+    // returns wavelength in channel i with a model which is linear in
+    // wavenumber. The wavelength in channel 140 is 2.5 um, and the
+    // wavelength in channel 255 is 1 um.
+    double dk=(1.0-1.0/2.5)/(140-256);
+    double k=1.0/2.5+i*dk;
+    return 1/k;      
+  }
+  
   double bandpass(double i){ // Return bandpass in um for channel i.
     // Current model is that bandpass for channel i is difference in
-    // wavelength between channels i and i+1
+    // wavelength between channels i-1 and i+1
     return fabs(wavelength(i+1)-wavelength(i-1));
   }
 
   double center(double i){
     return 125;
   }
-
 }
