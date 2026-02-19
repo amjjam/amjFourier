@@ -21,22 +21,24 @@
 #define NF 320
 
 namespace amjFourier{
-  template<class T>
+  template<typename T>
   class Frame:public amjPacketRW{
   public:
     Frame(int nL=1,int nF=1);
-    template<class U>
+    template<typename U>
     Frame(const Frame<U> &);
     ~Frame(){};
     void resize(int nL, int nF);
     unsigned int nL() const {return _nL;}
     unsigned int nF() const {return _nF;}
     void clear();
-    template<class U>
+    template<typename U>
     Frame<T> &operator=(const Frame<U> &);
     Frame<T> &operator*=(double);
-    template<class U>
+    template<typename U>
     Frame<T> &operator+=(const Frame<U> &);
+    template<typename U>
+    Frame<T> &operator-=(const Frame<U> &);
     std::vector<T> &operator[](int iL){return _frame[iL];};
     const std::vector<T> &operator[](int iL) const {return _frame[iL];};
     virtual void write(amjPacket &p) const;
@@ -52,18 +54,18 @@ namespace amjFourier{
     std::vector<std::vector<T> > _frame;
   };
   
-  template<class T>
+  template<typename T>
   Frame<T>::Frame(int nL, int nF):_nL(nL),_nF(nF){
     resize(nL,nF);
   }
   
-  template<class T>
-  template<class U>
+  template<typename T>
+  template<typename U>
   Frame<T>::Frame(const Frame<U> &f){
     operator=(f);
   }
   
-  template<class T>
+  template<typename T>
   void Frame<T>::resize(int nL, int nF){
     _nL=nL;
     _nF=nF;
@@ -72,7 +74,7 @@ namespace amjFourier{
       _frame[iL].resize(nF);
   }
   
-  template<class T>
+  template<typename T>
   void Frame<T>::clear(){
     unsigned int iF;
     for(unsigned int iL=0;iL<_nL;iL++)
@@ -80,8 +82,8 @@ namespace amjFourier{
 	_frame[iL][iF]=0;
   }
   
-  template<class T>
-  template<class U>
+  template<typename T>
+  template<typename U>
   Frame<T> &Frame<T>::operator=(const Frame<U> &f){
     _nL=f.nL();
     _nF=f.nF();
@@ -94,7 +96,7 @@ namespace amjFourier{
     return *this;
   }
   
-  template<class T>
+  template<typename T>
   Frame<T> &Frame<T>::operator*=(double f){
     for(int iL=0;iL<_nL;iL++)
       for(int iF=0;iF<_nF;iF++)
@@ -102,8 +104,8 @@ namespace amjFourier{
     return *this;
   }
   
-  template<class T>
-  template<class U>
+  template<typename T>
+  template<typename U>
   Frame<T> &Frame<T>::operator+=(const Frame<U> &f){
     if(_nL!=f.nL()||_nF!=f.nF()){
       std::cerr << "Frame<T>: frame dimensions do not match: (_nL,_nF)=(" << _nL
@@ -116,8 +118,23 @@ namespace amjFourier{
 	_frame[iL][iF]+=f[iL][iF];
     return *this;
   }
+
+  template<typename T>
+  template<typename U>
+  Frame<T> &Frame<T>::operator-=(const Frame<U> &f){
+    if(_nL!=f.nL()||_nF!=f.nF()){
+      std::cerr << "Frame<T>: frame dimensions do not match: (_nL,_nF)=(" << _nL
+		<< "," << _nF << ") and (f.nL,f.nF)=(" << f.nL() << "," << f.nF()
+		<< ")" << std::endl;
+      abort();
+    }
+    for(unsigned int iL=0;iL<_nL;iL++)
+      for(unsigned int iF=0;iF<_nF;iF++)
+	_frame[iL][iF]-=f[iL][iF];
+    return *this;
+  }
   
-  template<class T>
+  template<typename T>
   Frame<T> operator/(const Frame<T> &f, double d){
     Frame<T> r=f;
     for(unsigned int iL=0;iL<r.nL();iL++)
@@ -126,7 +143,7 @@ namespace amjFourier{
     return r;
   }
   
-  template<class T, class U>
+  template<typename T, typename U>
   Frame<T> operator-(const Frame<T> &p, const Frame<U> &m){
     Frame<T> r=p;
     for(unsigned int iL=0;iL<r.nL();iL++)
@@ -135,7 +152,7 @@ namespace amjFourier{
     return r;
   }
   
-  template<class T>
+  template<typename T>
   void Frame<T>::write(amjPacket &p) const{
     p.resize(2*sizeof(uint32_t)+_nL*_nF*sizeof(T));
     memcpy(p._data(),&_nL,sizeof(uint32_t));
@@ -144,7 +161,7 @@ namespace amjFourier{
       memcpy(p._data()+2*sizeof(uint32_t)+iL*_nF*sizeof(T),_frame[iL].data(),_nF*sizeof(T));
   }
   
-  template<class T>
+  template<typename T>
   void Frame<T>::write(uint8_t *p) const{
     memcpy(p,&_nL,sizeof(uint32_t));
     memcpy(p+sizeof(uint32_t),&_nF,sizeof(uint32_t));
@@ -152,7 +169,7 @@ namespace amjFourier{
       memcpy(p+2*sizeof(uint32_t)+iL*_nF*sizeof(T),_frame[iL].data(),_nF*sizeof(T));
   }
   
-  template<class T>
+  template<typename T>
   void Frame<T>::read(amjPacket &p){
     memcpy(&_nL,p._data(),sizeof(uint32_t));
     memcpy(&_nF,p._data()+sizeof(uint32_t),sizeof(uint32_t));
@@ -163,13 +180,13 @@ namespace amjFourier{
     }
   }
   
-  template<class T>
+  template<typename T>
   void Frame<T>::read1(uint8_t *p){
     memcpy(&_nL,p,sizeof(uint32_t));
     memcpy(&_nF,p+sizeof(uint32_t),sizeof(uint32_t));
   }
   
-  template<class T>
+  template<typename T>
   void Frame<T>::read2(uint8_t *p){
     _frame.resize(_nL);
     for(uint32_t iL=0;iL<_nL;iL++){
@@ -180,7 +197,7 @@ namespace amjFourier{
   
   float poidev(float xm, long *idum);
   
-  template<class T, class U>
+  template<typename T, typename U>
   void poisson(const Frame<T> &in, Frame<U> &out, long &seed){
     for(unsigned int iL=0;iL<in.nL();iL++)
       for(unsigned int iF=0;iF<in.nF();iF++)
@@ -382,8 +399,8 @@ namespace amjFourier{
       i1=iB*wL*wF;
       phasors[iB].resize(nP);
       for(unsigned int iP=0;iP<nP;iP++){
-	real=0;
-	imag=0;
+	real=imag=0;
+	float wsum=0;
 	for(iL=c0+iP*cAvg;iL<c0+(iP+1)*cAvg;iL++){
 	  //i2=i1+iL*nF;
 	  i2=i1+iL*wF;
@@ -393,10 +410,11 @@ namespace amjFourier{
 	    real+=frame[iL][iF]*c[i3];
 	    imag+=frame[iL][iF]*s[i3];
 	  }
+	  wsum+=wavelength(iL);
 	}
 	phasors[iB][iP].real(real);
 	phasors[iB][iP].imag(imag);
-	phasors[iB](iP)=wavelength(iL);
+	phasors[iB](iP)=wsum/cAvg;
       }
     }
   }
