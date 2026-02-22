@@ -22,7 +22,7 @@
 
 namespace amjFourier{
   template<typename T>
-  class Frame:public amjPacketRW{
+  class Frame/*:public amjPacketRW*/{
   public:
     Frame(int nL=1,int nF=1);
     template<typename U>
@@ -35,16 +35,17 @@ namespace amjFourier{
     template<typename U>
     Frame<T> &operator=(const Frame<U> &);
     Frame<T> &operator*=(double);
+    Frame<T> &operator/=(double);
     template<typename U>
     Frame<T> &operator+=(const Frame<U> &);
     template<typename U>
     Frame<T> &operator-=(const Frame<U> &);
     std::vector<T> &operator[](int iL){return _frame[iL];};
     const std::vector<T> &operator[](int iL) const {return _frame[iL];};
-    virtual void write(amjPacket &p) const;
+    //virtual void write(amjPacket &p) const;
     int size(){return 2*sizeof(uint32_t)+_nL*_nF*sizeof(T);};
     virtual void write(uint8_t *) const;
-    virtual void read(amjPacket &p);
+    //virtual void read(amjPacket &p);
     int size1(){return 2*sizeof(uint32_t);};
     void read1(uint8_t *);
     int size2(){return _nL*_nF*sizeof(T);};
@@ -105,6 +106,14 @@ namespace amjFourier{
   }
   
   template<typename T>
+  Frame<T> &Frame<T>::operator/=(double f){
+    for(unsigned int iL=0;iL<_nL;iL++)
+      for(unsigned int iF=0;iF<_nF;iF++)
+	_frame[iL][iF]/=f;
+    return *this;
+  }
+  
+  template<typename T>
   template<typename U>
   Frame<T> &Frame<T>::operator+=(const Frame<U> &f){
     if(_nL!=f.nL()||_nF!=f.nF()){
@@ -151,15 +160,50 @@ namespace amjFourier{
 	r[iL][iF]=p[iL][iF]-m[iL][iF];
     return r;
   }
+
+#include <vector>
+#include <cstddef>
   
-  template<typename T>
-  void Frame<T>::write(amjPacket &p) const{
-    p.resize(2*sizeof(uint32_t)+_nL*_nF*sizeof(T));
-    memcpy(p._data(),&_nL,sizeof(uint32_t));
-    memcpy(p._data()+sizeof(uint32_t),&_nF,sizeof(uint32_t));
-    for(uint32_t iL=0;iL<_nL;iL++)
-      memcpy(p._data()+2*sizeof(uint32_t)+iL*_nF*sizeof(T),_frame[iL].data(),_nF*sizeof(T));
+  template <typename T>
+  void boxcar2D(Frame<T> &frame, size_t bL, size_t bF){
+    const size_t nL = frame.nL();
+    const size_t nF = frame.nF();
+    
+    // summed-area table
+    Frame<T> sat(nL+1,nF+1);
+    sat.clear();
+    
+    // build integral image
+    for(size_t iL=1;iL<=nL;++iL){
+      double row_sum=0.0;
+      for(size_t iF=1;iF<=nF;++iF){
+	row_sum+=frame[iL-1][iF-1];
+	sat[iL][iF]=sat[iL-1][iF]+row_sum;
+      }
+    }
+    
+    const double norm=1.0/(bL*bF);
+    double sum;
+    
+    // apply boxcar only where the window fully fits
+    // edges are left untouched
+    for(size_t iL=bL;iL<=nL;++iL){
+      for(size_t iF=bF;iF<=nF;++iF){
+	sum=sat[iL][iF]-sat[iL-bL][iF]-sat[iL][iF-bF]+sat[iL-bL][iF-bF];
+	frame[iL-1][iF-1]=static_cast<T>(sum*norm);
+      }
+    }
   }
+  
+    
+  // template<typename T>
+  // void Frame<T>::write(amjPacket &p) const{
+  //   p.resize(2*sizeof(uint32_t)+_nL*_nF*sizeof(T));
+  //   memcpy(p._data(),&_nL,sizeof(uint32_t));
+  //   memcpy(p._data()+sizeof(uint32_t),&_nF,sizeof(uint32_t));
+  //   for(uint32_t iL=0;iL<_nL;iL++)
+  //     memcpy(p._data()+2*sizeof(uint32_t)+iL*_nF*sizeof(T),_frame[iL].data(),_nF*sizeof(T));
+  // }
   
   template<typename T>
   void Frame<T>::write(uint8_t *p) const{
@@ -169,16 +213,16 @@ namespace amjFourier{
       memcpy(p+2*sizeof(uint32_t)+iL*_nF*sizeof(T),_frame[iL].data(),_nF*sizeof(T));
   }
   
-  template<typename T>
-  void Frame<T>::read(amjPacket &p){
-    memcpy(&_nL,p._data(),sizeof(uint32_t));
-    memcpy(&_nF,p._data()+sizeof(uint32_t),sizeof(uint32_t));
-    _frame.resize(_nL);
-    for(uint32_t iL=0;iL<_nL;iL++){
-      _frame[iL].resize(_nF);
-      memcpy(_frame[iL].data(),p._data()+2*sizeof(uint32_t)+iL*_nF*sizeof(T),_nF*sizeof(T));
-    }
-  }
+  // template<typename T>
+  // void Frame<T>::read(amjPacket &p){
+  //   memcpy(&_nL,p._data(),sizeof(uint32_t));
+  //   memcpy(&_nF,p._data()+sizeof(uint32_t),sizeof(uint32_t));
+  //   _frame.resize(_nL);
+  //   for(uint32_t iL=0;iL<_nL;iL++){
+  //     _frame[iL].resize(_nF);
+  //     memcpy(_frame[iL].data(),p._data()+2*sizeof(uint32_t)+iL*_nF*sizeof(T),_nF*sizeof(T));
+  //   }
+  // }
   
   template<typename T>
   void Frame<T>::read1(uint8_t *p){
@@ -423,6 +467,7 @@ namespace amjFourier{
   double wavelength_lin(double i); // wavelength for channel i, linear in wavenumber 
   double bandpass(double i); // bandpass for channel i in um
   double center(double i); // center of fringes in channel i, in pixels
+  double window(double i); // window function (now Gaussian with sigma=20)
 }
 
 #endif /* _FOURIERSIM_H_ */

@@ -305,8 +305,8 @@ namespace amjFourier{
 	for(unsigned int iF=0,jF=F0;iF<wF;iF++,jF++){
 	  i3=i2+iF;
 	  f=2*M_PI*(jF-center(jL))/period;
-	  c[i3]=cos(f);
-	  s[i3]=sin(f);
+	  c[i3]=cos(f)*window(jF-center(jL));
+	  s[i3]=sin(f)*window(jF-center(jL));
 	}
       }
     }
@@ -350,5 +350,10 @@ assert(s.size() == periods.size() * nL * nF);
 
   double center(double i){
     return 125;
+  }
+
+  double window(double i){
+    double sigma=20;
+    return exp(-i*i/2/sigma/sigma)/sqrt(2*M_PI*sigma*sigma);
   }
 }
