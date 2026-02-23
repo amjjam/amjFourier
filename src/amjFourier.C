@@ -305,13 +305,11 @@ namespace amjFourier{
 	for(unsigned int iF=0,jF=F0;iF<wF;iF++,jF++){
 	  i3=i2+iF;
 	  f=2*M_PI*(jF-center(jL))/period;
-	  c[i3]=cos(f)*window(jF-center(jL));
-	  s[i3]=sin(f)*window(jF-center(jL));
+	  c[i3]=cos(f)/**window(jF-center(jL))*/;
+	  s[i3]=sin(f)/**window(jF-center(jL))*/;
 	}
       }
     }
-    assert(c.size() == periods.size() * nL * nF);
-assert(s.size() == periods.size() * nL * nF);
   }
   
   double wavelength(double i){ // returns wavelength in um for channel i
