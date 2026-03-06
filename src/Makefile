@@ -9,11 +9,10 @@ ifndef prefix_amjInterferometry
 	prefix_amjInterferometry=$(prefix)
 endif
 
-LIBS=-lamjCom -lamjInterferometry
-LDFLAGS=-L$(prefix_amjCom)/lib -L$(prefix_amjInterferometry)/lib
+LIBS=-lamjInterferometry
+LDFLAGS=-L$(prefix_amjInterferometry)/lib
 
-FLAGS=-Wall -g -fPIC -I$(prefix_amjCom)/include -I$(prefix_amjCom)/include/amjCom -I$(prefix_amjInterferometry)/include
-#-g -fsanitize=address,undefined -fno-omit-frame-pointer
+FLAGS=-Wall -g -fPIC -I$(prefix_amjInterferometry)/include
 CPPFLAGS=$(FLAGS)
 
 
