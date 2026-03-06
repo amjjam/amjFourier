@@ -30,8 +30,7 @@ namespace amjFourier{
     initialize();
   }
 
-  void Sim::set_window(unsigned int L0_, unsigned int F0_, unsigned int wL_,
-		       unsigned int wF_){
+  void Sim::set_window(size_t L0_, size_t F0_, size_t wL_, size_t wF_){
     L0=L0_; F0=F0_; wL=wL_; wF=wF_;
     initialize();
   }
@@ -287,14 +286,25 @@ namespace amjFourier{
     initialize();
   }
 
+  void CalcPhasors::set_names(std::vector<std::string> s){
+    names=s;
+    names_sizing();
+  }
+  
   void CalcPhasors::set_channel_sum(unsigned int cAvg_){
     cAvg=cAvg_;
     initialize();
   }  
+
+  void CalcPhasors::names_sizing(){
+    if(periods.size()>names.size())
+      names.resize(periods.size(),"None");
+  }
   
   void CalcPhasors::initialize(){
     c.resize(periods.size()*wL*wF);
     s.resize(periods.size()*wL*wF);
+    names_sizing();
     int i1,i2,i3;
     float period,f;
     for(unsigned int iB=0;iB<periods.size();iB++){

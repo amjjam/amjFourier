@@ -44,7 +44,7 @@ int main(int argc, char *argv[]){
   amjFourier::Sim sim(beams,baselines);
   amjFourier::Frame<double> frame;
   sim.set_window(L0,F0,wL,wF);
-  sim(0,frame);
+  sim(frame);
   
   int nL=frame.nL(),nF=frame.nF();
   
