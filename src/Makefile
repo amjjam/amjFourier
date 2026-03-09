@@ -9,7 +9,7 @@ ifndef prefix_amjInterferometry
 	prefix_amjInterferometry=$(prefix)
 endif
 
-LIBS=-lamjInterferometry
+LIBS=-lamjInterferometry -lamjTime
 LDFLAGS=-L$(prefix_amjInterferometry)/lib
 
 FLAGS=-Wall -g -fPIC -I$(prefix_amjInterferometry)/include
