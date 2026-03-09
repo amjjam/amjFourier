@@ -262,7 +262,7 @@ namespace amjFourier{
   CalcPhasors::CalcPhasors():nL(NL),nF(NF),L0(0),F0(0),wL(nL),wF(nF),
 			     C0(0),nC(NF),cAvg(1),
 			     wavelength(amjFourier::wavelength),
-			     center(amjFourier::center),periods({3.34}){
+			     center(amjFourier::center),periods({3.34,6.68,10.02}){
     initialize();
   }
   
