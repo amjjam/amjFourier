@@ -219,23 +219,23 @@ namespace amjFourier{
   template<typename T>
   size_t Frame<T>::read1(uint8_t *pp){
     uint8_t *p=pp;
-    p=(uint8_t *)memcpy(&_nL,p,sizeof(uint32_t))+sizeof(uint32_t);
-    p=(uint8_t *)memcpy(&_nF,p,sizeof(uint32_t))+sizeof(uint32_t);
-    p=(uint8_t *)memcpy(&_L0,p,sizeof(uint32_t))+sizeof(uint32_t);
-    p=(uint8_t *)memcpy(&_F0,p,sizeof(uint32_t))+sizeof(uint32_t);
-    p=(uint8_t *)memcpy(&_wL,p,sizeof(uint32_t))+sizeof(uint32_t);
-    p=(uint8_t *)memcpy(&_wF,p,sizeof(uint32_t))+sizeof(uint32_t);
+    memcpy(&_nL,p,sizeof(uint32_t)); p+=sizeof(uint32_t);
+    memcpy(&_nF,p,sizeof(uint32_t)); p+=sizeof(uint32_t);
+    memcpy(&_L0,p,sizeof(uint32_t)); p+=sizeof(uint32_t);
+    memcpy(&_F0,p,sizeof(uint32_t)); p+=sizeof(uint32_t);
+    memcpy(&_wL,p,sizeof(uint32_t)); p+=sizeof(uint32_t);
+    memcpy(&_wF,p,sizeof(uint32_t)); p+=sizeof(uint32_t);
     p+=_t.read(p);
+    resize();
     return p-pp;
   }
   
   template<typename T>
   size_t Frame<T>::read2(uint8_t *pp){
     uint8_t *p=pp;
-    _frame.resize(_wL);
     for(uint32_t iL=0;iL<_wL;iL++){
-      _frame[iL].resize(_wF);
-      p=(uint8_t *)memcpy(_frame[iL].data(),p,_wF*sizeof(T))+_wF*sizeof(T);
+      memcpy(_frame[iL].data(),p,_wF*sizeof(T));
+      p+=_wF*sizeof(T);
     }
     return p-pp;
   }
@@ -343,6 +343,7 @@ namespace amjFourier{
   
   template<typename T>
   void Sim::operator()(Frame<T> &frame){
+    frame.time().now();
     frame.nL(nL);
     frame.nF(nF);
     frame.L0(L0);
