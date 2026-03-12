@@ -37,7 +37,7 @@ namespace amjFourier{
     void wL(size_t x){_wL=x; resize();}
     size_t wF() const {return _wF;}
     void wF(size_t x){_wF=x; resize();}
-    amjTime &time(){return _t;}
+    void time(const amjTime &t){_t=t;}
     const amjTime &time() const {return _t;}
     void clear();
     template<typename U>
@@ -343,7 +343,9 @@ namespace amjFourier{
   
   template<typename T>
   void Sim::operator()(Frame<T> &frame){
-    frame.time().now();
+    amjTime t;
+    t.now();
+    frame.time(t);
     frame.nL(nL);
     frame.nF(nF);
     frame.L0(L0);
