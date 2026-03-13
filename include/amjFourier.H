@@ -343,9 +343,7 @@ namespace amjFourier{
   
   template<typename T>
   void Sim::operator()(Frame<T> &frame){
-    amjTime t;
-    t.now();
-    frame.time(t);
+    frame.time(amjTime::Now());
     frame.nL(nL);
     frame.nF(nF);
     frame.L0(L0);
