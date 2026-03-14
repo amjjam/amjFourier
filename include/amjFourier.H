@@ -2,8 +2,14 @@
 #define _AMJFOURIER_H_
 
 #include <vector>
+#include <cstddef>
 #include <cstdint>
+#include <cstdlib>
 #include <iostream>
+#include <cmath>
+#include <string>
+#include <cstring>
+
 
 #include <complex>
 #include <tuple>
@@ -165,9 +171,6 @@ namespace amjFourier{
     return r;
   }
 
-#include <vector>
-#include <cstddef>
-  
   template <typename T>
   void boxcar2D(Frame<T> &frame, size_t bL, size_t bF){
     const size_t wL = frame.wL();
