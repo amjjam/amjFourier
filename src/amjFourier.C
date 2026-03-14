@@ -146,7 +146,6 @@ namespace amjFourier{
     return ans;
   }
 
-#include <math.h>
 #define PI 3.141592654
   
   float poidev(float xm, long *idum){
@@ -186,8 +185,6 @@ namespace amjFourier{
   }
 #undef PI
   /* (C) Copr. 1986-92 Numerical Recipes Software 1)0. */
-  
-#include <math.h>
   
   float gammln(float xx){
     double x,y,tmp,ser;
